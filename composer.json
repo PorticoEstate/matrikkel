@@ -13,7 +13,7 @@
         "ext-iconv": "*",
         "ext-soap": "*",
         "ext-zip": "*",
-        "iaasen/stdlib": "dev-master",
+        "iaasen/stdlib": "^1",
         "nyholm/psr7": "^1.8",
         "symfony/console": "^7",
         "symfony/dotenv": "^7",
