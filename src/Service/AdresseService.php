@@ -7,9 +7,9 @@
 namespace Iaasen\Matrikkel\Service;
 
 use Iaasen\Exception\InvalidArgumentException;
-use Iaasen\Geonorge\Entity\LocationLatLong;
-use Iaasen\Geonorge\Entity\LocationUtm;
-use Iaasen\Geonorge\Rest\TranscodeService;
+use Iaasen\Matrikkel\Geonorge\Entity\LocationLatLong;
+use Iaasen\Matrikkel\Geonorge\Entity\LocationUtm;
+use Iaasen\Matrikkel\Geonorge\Rest\TranscodeService;
 use Iaasen\Matrikkel\Client\AdresseClient;
 use Iaasen\Matrikkel\Client\BubbleId;
 use Iaasen\Matrikkel\Client\MatrikkelenhetClient;

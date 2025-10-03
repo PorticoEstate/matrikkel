@@ -4,10 +4,10 @@
  * This provides basic functionality until the proper Geonorge package is available.
  */
 
-namespace Iaasen\Geonorge\Rest;
+namespace Iaasen\Matrikkel\Geonorge\Rest;
 
-use Iaasen\Geonorge\Entity\LocationLatLong;
-use Iaasen\Geonorge\Entity\LocationUtm;
+use Iaasen\Matrikkel\Geonorge\Entity\LocationLatLong;
+use Iaasen\Matrikkel\Geonorge\Entity\LocationUtm;
 
 class TranscodeService
 {

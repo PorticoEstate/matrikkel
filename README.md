@@ -132,7 +132,79 @@ Search the cadastre:
 php bin/console matrikkel:sok
 ```
 
-### Docker Commands
+### REST API Endpoints
+
+The project now includes a comprehensive REST API that provides JSON access to all Matrikkel functionality:
+
+**Base URL**: `http://localhost:8083/api/v1`
+
+**Available Endpoints**:
+
+```bash
+# API Documentation
+GET /api/v1/endpoints          # List all available endpoints
+GET /api/v1/ping               # API health check
+
+# Address Services
+GET /api/v1/address/{id}                    # Get address by ID
+GET /api/v1/address/search?q={query}       # Search addresses via API
+GET /api/v1/address/search/db?q={query}    # Search addresses in local DB
+GET /api/v1/address/postal/{postnummer}    # Get postal area
+
+# Municipality Services  
+GET /api/v1/municipality/{id}              # Get municipality by ID
+GET /api/v1/municipality/number/{number}   # Get municipality by number
+
+# Property Unit Services
+GET /api/v1/property-unit/{id}                    # Get property unit by ID
+GET /api/v1/property-unit/address/{addressId}     # Get units for address
+
+# Cadastral Unit Services
+GET /api/v1/cadastral-unit/{id}                        # Get by ID
+GET /api/v1/cadastral-unit/{knr}/{gnr}/{bnr}           # Get by matrikkel number
+GET /api/v1/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}     # With festenummer
+GET /api/v1/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}/{snr} # With section
+
+# Code Lists
+GET /api/v1/codelist           # Get all code lists
+GET /api/v1/codelist/{id}      # Get specific code list with codes
+
+# General Search
+GET /api/v1/search?q={query}&source=api&limit={number}&offset={start}    # Search via Matrikkel API (pagination support)
+GET /api/v1/search?q={query}&source=db     # Search via local database
+```
+
+**Example API Usage**:
+
+```bash
+# Test API health
+curl http://localhost:8083/api/v1/ping
+
+# Search for addresses
+curl "http://localhost:8083/api/v1/address/search?q=Bergen"
+
+# Get municipality data  
+curl http://localhost:8083/api/v1/municipality/4601
+
+# Search with pagination - get results beyond 100
+curl "http://localhost:8083/api/v1/search?q=oslo&source=api&limit=50&offset=0"    # First 50 results
+curl "http://localhost:8083/api/v1/search?q=oslo&source=api&limit=50&offset=50"   # Next 50 results  
+curl "http://localhost:8083/api/v1/search?q=oslo&source=api&limit=50&offset=100"  # Results 101-150
+
+# Search with local database
+curl "http://localhost:8083/api/v1/search?q=Oslo&source=db"
+
+```
+
+All endpoints return JSON with this structure:
+
+```json
+{
+  "data": { ... },
+  "timestamp": "2025-10-03T13:57:21+00:00", 
+  "status": "success"
+}
+```### Docker Commands
 
 ```bash
 # Start containers

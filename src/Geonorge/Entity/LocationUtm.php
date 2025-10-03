@@ -3,7 +3,7 @@
  * Represents UTM coordinates (Universal Transverse Mercator)
  */
 
-namespace Iaasen\Geonorge\Entity;
+namespace Iaasen\Matrikkel\Geonorge\Entity;
 
 class LocationUtm
 {

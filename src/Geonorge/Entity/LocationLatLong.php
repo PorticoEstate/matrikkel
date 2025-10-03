@@ -3,7 +3,7 @@
  * Represents Latitude/Longitude coordinates (WGS84)
  */
 
-namespace Iaasen\Geonorge\Entity;
+namespace Iaasen\Matrikkel\Geonorge\Entity;
 
 class LocationLatLong
 {

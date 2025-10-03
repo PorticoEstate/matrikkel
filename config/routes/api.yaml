@@ -1,0 +1,4 @@
+# API Routes for Matrikkel REST API
+api:
+    resource: '../../src/Controller/MatrikkelApiController.php'
+    type: attribute
