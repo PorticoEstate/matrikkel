@@ -1,7 +1,5 @@
 <?php
 
-use Iaasen\Factory\ReflectionBasedAbstractFactory;
-
 return [
 	'matrikkel-api' => [
 		'environment' => 'test',
@@ -23,7 +21,6 @@ return [
 	'service_manager' => [
 		'abstract_factories' => [
 			\Iaasen\Matrikkel\Client\SoapClientFactory::class,
-			ReflectionBasedAbstractFactory::class,
 		],
 		'factories' => [
 //			\Iaasen\Matrikkel\Client\AdresseClient::class => \Iaasen\Matrikkel\Client\SoapClientFactory::class,

@@ -6,39 +6,30 @@
 
 namespace Iaasen\Matrikkel\Client;
 
-use Iaasen\Exception\InvalidArgumentException;
-use Iaasen\Service\LaminasMvcConfig;
-use Laminas\ServiceManager\Factory\AbstractFactoryInterface;
-use Psr\Container\ContainerInterface;
-
-class SoapClientFactory implements AbstractFactoryInterface {
-
-	/** Laminas abstract factory */
-	public function canCreate(ContainerInterface $container, $requestedName) {
-		return is_subclass_of($requestedName, AbstractSoapClient::class);
-	}
-
-	/** Laminas factory */
-	public function __invoke(ContainerInterface $container, $requestedName, ?array $options = null) : object {
-		$config = $container->get(LaminasMvcConfig::class);
-		if(!isset($config['matrikkel-api'])) throw new InvalidArgumentException('Config is missing key "matrikkel-api"');
-		$config = $config['matrikkel-api'];
-
-		return new $requestedName(
-			$requestedName::WSDL[$config['environment'] ?? 'prod'],
-			[
-				'login' => $config['login'],
-				'password' => $config['password'],
-			],
-		);
-	}
-
+class SoapClientFactory {
 
 	/** Symfony factory */
 	public static function create(string $className) : AbstractSoapClient {
+		$options = [
+			'login' => $_ENV['MATRIKKELAPI_LOGIN'], 
+			'password' => $_ENV['MATRIKKELAPI_PASSWORD']
+		];
+		
+		// Add proxy configuration if available
+		if (!empty($_ENV['HTTP_PROXY'])) {
+			$options['proxy_host'] = parse_url($_ENV['HTTP_PROXY'], PHP_URL_HOST);
+			$options['proxy_port'] = parse_url($_ENV['HTTP_PROXY'], PHP_URL_PORT);
+			
+			// Add proxy authentication if needed
+			if (!empty($_ENV['PROXY_USER'])) {
+				$options['proxy_login'] = $_ENV['PROXY_USER'];
+				$options['proxy_password'] = $_ENV['PROXY_PASSWORD'] ?? '';
+			}
+		}
+		
 		return new $className(
 			$className::WSDL[$_ENV['MATRIKKELAPI_ENVIRONMENT'] ?? 'prod'],
-			['login' => $_ENV['MATRIKKELAPI_LOGIN'], 'password' => $_ENV['MATRIKKELAPI_PASSWORD']]
+			$options
 		);
 	}
 }

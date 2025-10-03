@@ -13,13 +13,18 @@
         "ext-iconv": "*",
         "ext-zip": "*",
         "iaasen/stdlib": "^1",
+        "laminas/laminas-db": "*",
+        "laminas/laminas-servicemanager": "*",
+        "laminas/laminas-soap": "*",
         "nyholm/psr7": "^1.8",
         "symfony/console": "^7",
         "symfony/dotenv": "^7",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "^7",
         "symfony/http-client": "^7",
+        "symfony/mailer": "7.*",
         "symfony/runtime": "^7",
+        "symfony/validator": "7.*",
         "symfony/yaml": "^7"
     },
     "suggest": {
@@ -33,12 +38,14 @@
             "symfony/flex": true,
             "symfony/runtime": true
         },
-        "sort-packages": true
+        "sort-packages": true,
+        "audit": {
+            "abandoned": "ignore"
+        }
     },
     "autoload": {
         "psr-4": {
-            "Iaasen\\Matrikkel\\": "src/",
-            "App\\": "src/"
+            "Iaasen\\Matrikkel\\": "src/"
         }
     },
     "autoload-dev": {
@@ -64,7 +71,7 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
-            "require": "6.3.*"
+            "require": "7.*"
         }
     },
     "repositories": []

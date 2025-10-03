@@ -58,7 +58,16 @@ class AdresseImportService {
         $io->write('Download the import file... ');
 		$success = $this->downloadFile($list);
 		if(!$success) {
-			$io->writeln('Failed to download file from ' . self::$settings[$list]['adresse_url']);
+            $error = error_get_last();
+            $errorMessage = $error ? $error['message'] : 'Unknown error';
+			$io->writeln('<error>Failed</error>');
+            $io->writeln('Failed to download file from ' . self::$settings[$list]['adresse_url']);
+            $io->writeln('Error: ' . $errorMessage);
+            $io->writeln('');
+            $io->writeln('Troubleshooting tips:');
+            $io->writeln('1. Check your internet connection');
+            $io->writeln('2. Verify proxy settings in .env file');
+            $io->writeln('3. Try running: docker compose exec app ping nedlasting.geonorge.no');
 			return false;
 		}
         $io->writeln('<info>Success</info>');
@@ -132,7 +141,73 @@ class AdresseImportService {
 
 	protected function downloadFile(string $list) : bool
     {
-		return copy(self::$settings[$list]['adresse_url'], self::ZIP_FILE);
+        $url = self::$settings[$list]['adresse_url'];
+        $zipFile = self::ZIP_FILE;
+        
+        // Ensure the cache directory exists
+        if (!is_dir(self::CACHE_FOLDER)) {
+            mkdir(self::CACHE_FOLDER, 0755, true);
+        }
+        
+        // Initialize cURL session
+        $ch = curl_init();
+        
+        // Set cURL options
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => false, // Don't return data, write directly to file
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_CONNECTTIMEOUT => 60,
+            CURLOPT_TIMEOUT => 300, // 5 minutes
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; Matrikkel-Client/1.0)',
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_NOPROGRESS => false, // Enable progress reporting
+            CURLOPT_PROGRESSFUNCTION => function($resource, $downloadTotal, $downloaded, $uploadTotal, $uploaded) {
+                // Optional: could add progress reporting here
+                return 0; // Continue download
+            },
+        ]);
+        
+        // Add proxy settings if available
+        if (!empty($_ENV['HTTP_PROXY'] ?? $_ENV['http_proxy'])) {
+            curl_setopt($ch, CURLOPT_PROXY, $_ENV['HTTP_PROXY'] ?? $_ENV['http_proxy']);
+            curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
+        }
+        
+        // Open file for writing
+        $fp = fopen($zipFile, 'w+');
+        if (!$fp) {
+            curl_close($ch);
+            return false;
+        }
+        
+        // Set file as output target
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        
+        // Execute the download
+        $success = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        
+        // Clean up
+        curl_close($ch);
+        fclose($fp);
+        
+        // Check for errors
+        if (!$success || $httpCode !== 200) {
+            if ($error) {
+                error_log("cURL Error: $error (HTTP $httpCode)");
+            }
+            // Remove partial file on failure
+            if (file_exists($zipFile)) {
+                unlink($zipFile);
+            }
+            return false;
+        }
+        
+        return file_exists($zipFile) && filesize($zipFile) > 0;
 	}
 
     protected function extractFile(): bool
