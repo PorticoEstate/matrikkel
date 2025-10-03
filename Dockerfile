@@ -48,12 +48,29 @@ RUN docker-php-ext-install \
     sysvshm \
     sysvmsg
 
+# Configure PEAR
+RUN if [ -n "${http_proxy}" ]; then pear config-set http_proxy ${http_proxy}; fi && \
+    pear config-set php_ini $PHP_INI_DIR/php.ini
+
+
+    # Install Xdebug
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+
 # Configure PHP settings for stream wrappers and SSL
 RUN echo "allow_url_fopen = On" >> /usr/local/etc/php/php.ini \
     && echo "allow_url_include = Off" >> /usr/local/etc/php/php.ini \
     && echo "user_agent = 'Mozilla/5.0 (compatible; Matrikkel-Client/1.0)'" >> /usr/local/etc/php/php.ini \
     && echo "default_socket_timeout = 300" >> /usr/local/etc/php/php.ini \
     && echo "openssl.cafile = /etc/ssl/certs/ca-certificates.crt" >> /usr/local/etc/php/php.ini
+
+# Configure Xdebug
+RUN echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.log=/tmp/xdebug.log" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.idekey=VSCODE" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # Update CA certificates for SSL connections
 RUN update-ca-certificates
