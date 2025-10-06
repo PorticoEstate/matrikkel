@@ -9,7 +9,7 @@ services:
         NO_PROXY: ${NO_PROXY:-}
     container_name: matrikkel_app
     ports:
-      - "8083:8000"
+      - "8083:80"
     volumes:
       - .:/var/www/html
       - ./var:/var/www/html/var
@@ -23,7 +23,6 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
     working_dir: /var/www/html
-    command: ["php", "-S", "0.0.0.0:8000", "-t", "public"]
     depends_on:
       - composer
     networks:

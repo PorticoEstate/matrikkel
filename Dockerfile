@@ -1,5 +1,5 @@
 # Use PHP 8.2 with Apache
-FROM php:8.2-cli
+FROM php:8.2-apache
 
 # Set proxy environment variables if needed
 ARG HTTP_PROXY
@@ -70,13 +70,25 @@ RUN echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.
     && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.log=/tmp/xdebug.log" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
-    && echo "xdebug.idekey=VSCODE" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    && echo "xdebug.idekey=VSCODE" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.discover_client_host=1" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # Update CA certificates for SSL connections
 RUN update-ca-certificates
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Enable Apache modules
+RUN a2enmod rewrite
+
+# Configure Apache
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+# Configure Apache document root
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Set working directory
 WORKDIR /var/www/html
@@ -95,8 +107,8 @@ RUN mkdir -p /var/www/html/var/cache /var/www/html/var/log \
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Expose port 8000
-EXPOSE 8000
+# Expose port 80
+EXPOSE 80
 
-# Start PHP built-in server
-CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
+# Start Apache
+CMD ["apache2-foreground"]
