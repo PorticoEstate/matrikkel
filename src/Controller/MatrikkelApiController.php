@@ -32,6 +32,47 @@ class MatrikkelApiController extends AbstractController
     ) {}
 
     /**
+     * Get the complete list of available API endpoints
+     * Centralized definition for easy maintenance
+     */
+    private function getAvailableEndpoints(): array
+    {
+        return [
+            'health' => [
+                'GET /api/v1/ping' => 'API health check'
+            ],
+            'adresse' => [
+                'GET /api/v1/adresse/{id}' => 'Hent adresse på ID',
+                'GET /api/v1/adresse/sok?q={query}' => 'Søk adresser',
+                'GET /api/v1/adresse/sok/db?q={query}' => 'Søk adresser i lokal database',
+                'GET /api/v1/adresse/postnummer/{postnummer}' => 'Hent postnummerområde'
+            ],
+            'kommune' => [
+                'GET /api/v1/kommune/{id}' => 'Hent kommune på ID',
+                'GET /api/v1/kommune/nummer/{nummer}' => 'Hent kommune på kommunenummer'
+            ],
+            'bruksenhet' => [
+                'GET /api/v1/bruksenhet/{id}' => 'Hent bruksenhet på ID',
+                'GET /api/v1/bruksenhet/adresse/{adresseId}' => 'Hent bruksenheter for adresse'
+            ],
+            'matrikkelenhet' => [
+                'GET /api/v1/matrikkelenhet/{id}' => 'Hent matrikkelenhet på ID',
+                'GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}' => 'Hent matrikkelenhet på matrikkelnummer',
+                'GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}' => 'Hent matrikkelenhet med festenummer',
+                'GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}/{snr}' => 'Hent matrikkelenhet med seksjonsnummer'
+            ],
+            'kodeliste' => [
+                'GET /api/v1/kodeliste' => 'Hent alle kodelister',
+                'GET /api/v1/kodeliste/{id}' => 'Hent kodeliste på ID (med koder)'
+            ],
+            'sok' => [
+                'GET /api/v1/sok?q={query}&source=api&limit={number}&offset={start}' => 'Søk i Matrikkel API (limit: 1-100 eller -1 for alle, offset: paginering)',
+                'GET /api/v1/sok?q={query}&source=db' => 'Søk i lokal database'
+            ]
+        ];
+    }
+
+    /**
      * API Health Check / Ping
      */
     #[Route('/ping', name: 'ping', methods: ['GET'])]
@@ -46,58 +87,24 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get all available API endpoints
+     * Hent alle tilgjengelige API-endepunkter
      */
     #[Route('/endpoints', name: 'endpoints', methods: ['GET'])]
     public function getEndpoints(): JsonResponse
     {
-        $endpoints = [
-            'health' => [
-                'GET /api/v1/ping' => 'API health check'
-            ],
-            'address' => [
-                'GET /api/v1/address/{id}' => 'Get address by ID',
-                'GET /api/v1/address/search?q={query}' => 'Search addresses',
-                'GET /api/v1/address/search/db?q={query}' => 'Search addresses in local database',
-                'GET /api/v1/address/postal/{postnummer}' => 'Get postal area by postal code'
-            ],
-            'municipality' => [
-                'GET /api/v1/municipality/{id}' => 'Get municipality by ID',
-                'GET /api/v1/municipality/number/{number}' => 'Get municipality by number'
-            ],
-            'property_unit' => [
-                'GET /api/v1/property-unit/{id}' => 'Get property unit by ID',
-                'GET /api/v1/property-unit/address/{addressId}' => 'Get property units for address'
-            ],
-            'cadastral_unit' => [
-                'GET /api/v1/cadastral-unit/{id}' => 'Get cadastral unit by ID',
-                'GET /api/v1/cadastral-unit/{knr}/{gnr}/{bnr}' => 'Get cadastral unit by matrikkel number',
-                'GET /api/v1/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}' => 'Get cadastral unit with festenummer',
-                'GET /api/v1/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}/{snr}' => 'Get cadastral unit with section number'
-            ],
-            'code_lists' => [
-                'GET /api/v1/codelist' => 'Get all code lists',
-                'GET /api/v1/codelist/{id}' => 'Get code list by ID (with codes)'
-            ],
-            'search' => [
-                'GET /api/v1/search?q={query}&source=api&limit={number}&offset={start}' => 'Search using Matrikkel API (limit: 1-100 or -1 for all, offset: pagination start)',
-                'GET /api/v1/search?q={query}&source=db' => 'Search using local database'
-            ]
-        ];
-
         return $this->jsonResponse([
-            'title' => 'Matrikkel REST API',
-            'version' => '1.0',
-            'endpoints' => $endpoints
+            'tittel' => 'Matrikkel REST API',
+            'versjon' => '1.0',
+            'endepunkter' => $this->getAvailableEndpoints()
         ]);
     }
 
-    // ==================== ADDRESS ENDPOINTS ====================
+    // ==================== ADRESSE ENDPOINTS ====================
 
     /**
-     * Get address by ID
+     * Hent adresse på ID
      */
-    #[Route('/address/{id}', name: 'address_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/adresse/{id}', name: 'adresse_hent', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function getAddress(int $id): JsonResponse
     {
         try {
@@ -109,9 +116,9 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Search addresses via API
+     * Søk adresser via API
      */
-    #[Route('/address/search', name: 'address_search', methods: ['GET'])]
+    #[Route('/adresse/sok', name: 'adresse_sok', methods: ['GET'])]
     public function searchAddresses(Request $request): JsonResponse
     {
         $query = $request->query->get('q', '');
@@ -138,9 +145,9 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Search addresses in local database
+     * Søk adresser i lokal database
      */
-    #[Route('/address/search/db', name: 'address_search_db', methods: ['GET'])]
+    #[Route('/adresse/sok/db', name: 'adresse_sok_db', methods: ['GET'])]
     public function searchAddressesInDb(Request $request): JsonResponse
     {
         $query = $request->query->get('q', '');
@@ -162,9 +169,9 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get postal area by postal code
+     * Hent postnummerområde
      */
-    #[Route('/address/postal/{postnummer}', name: 'postal_area', methods: ['GET'], requirements: ['postnummer' => '\d+'])]
+    #[Route('/adresse/postnummer/{postnummer}', name: 'postnummer_hent', methods: ['GET'], requirements: ['postnummer' => '\d+'])]
     public function getPostalArea(int $postnummer): JsonResponse
     {
         try {
@@ -175,12 +182,12 @@ class MatrikkelApiController extends AbstractController
         }
     }
 
-    // ==================== MUNICIPALITY ENDPOINTS ====================
+    // ==================== KOMMUNE ENDPOINTS ====================
 
     /**
-     * Get municipality by ID
+     * Hent kommune på ID
      */
-    #[Route('/municipality/{id}', name: 'municipality_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/kommune/{id}', name: 'kommune_hent', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function getMunicipality(int $id): JsonResponse
     {
         try {
@@ -192,25 +199,25 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get municipality by number
+     * Hent kommune på kommunenummer
      */
-    #[Route('/municipality/number/{number}', name: 'municipality_by_number', methods: ['GET'], requirements: ['number' => '\d+'])]
-    public function getMunicipalityByNumber(string $number): JsonResponse
+    #[Route('/kommune/nummer/{nummer}', name: 'kommune_etter_nummer', methods: ['GET'], requirements: ['nummer' => '\d+'])]
+    public function getMunicipalityByNumber(string $nummer): JsonResponse
     {
         try {
-            $municipality = $this->kommuneService->getKommuneByNumber($number);
+            $municipality = $this->kommuneService->getKommuneByNumber($nummer);
             return $this->jsonResponse($municipality);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 404);
         }
     }
 
-    // ==================== PROPERTY UNIT ENDPOINTS ====================
+    // ==================== BRUKSENHET ENDPOINTS ====================
 
     /**
-     * Get property unit by ID
+     * Hent bruksenhet på ID
      */
-    #[Route('/property-unit/{id}', name: 'property_unit_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/bruksenhet/{id}', name: 'bruksenhet_hent', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function getPropertyUnit(int $id): JsonResponse
     {
         try {
@@ -222,13 +229,13 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get property units for an address
+     * Hent bruksenheter for adresse
      */
-    #[Route('/property-unit/address/{addressId}', name: 'property_units_for_address', methods: ['GET'], requirements: ['addressId' => '\d+'])]
-    public function getPropertyUnitsForAddress(int $addressId): JsonResponse
+    #[Route('/bruksenhet/adresse/{adresseId}', name: 'bruksenheter_for_adresse', methods: ['GET'], requirements: ['adresseId' => '\d+'])]
+    public function getPropertyUnitsForAddress(int $adresseId): JsonResponse
     {
         try {
-            $propertyUnits = $this->bruksenhetService->getBruksenheterByAdresseId($addressId);
+            $propertyUnits = $this->bruksenhetService->getBruksenheterByAdresseId($adresseId);
             
             // Convert property units to arrays for proper JSON serialization
             $convertedPropertyUnits = array_map(function($unit) {
@@ -236,21 +243,21 @@ class MatrikkelApiController extends AbstractController
             }, $propertyUnits);
             
             return $this->jsonResponse([
-                'address_id' => $addressId,
-                'property_units' => $convertedPropertyUnits,
-                'count' => count($propertyUnits)
+                'adresse_id' => $adresseId,
+                'bruksenheter' => $convertedPropertyUnits,
+                'antall' => count($propertyUnits)
             ]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 404);
         }
     }
 
-    // ==================== CADASTRAL UNIT ENDPOINTS ====================
+    // ==================== MATRIKKELENHET ENDPOINTS ====================
 
     /**
-     * Get cadastral unit by ID
+     * Hent matrikkelenhet på ID
      */
-    #[Route('/cadastral-unit/{id}', name: 'cadastral_unit_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/matrikkelenhet/{id}', name: 'matrikkelenhet_hent', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function getCadastralUnit(int $id): JsonResponse
     {
         try {
@@ -262,16 +269,16 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get cadastral unit by matrikkel number (knr-gnr/bnr)
+     * Hent matrikkelenhet på matrikkelnummer (knr-gnr/bnr)
      */
-    #[Route('/cadastral-unit/{knr}/{gnr}/{bnr}', name: 'cadastral_unit_by_matrikkel', methods: ['GET'], requirements: ['knr' => '\d+', 'gnr' => '\d+', 'bnr' => '\d+'])]
+    #[Route('/matrikkelenhet/{knr}/{gnr}/{bnr}', name: 'matrikkelenhet_etter_matrikkelnummer', methods: ['GET'], requirements: ['knr' => '\d+', 'gnr' => '\d+', 'bnr' => '\d+'])]
     public function getCadastralUnitByMatrikkel(int $knr, int $gnr, int $bnr): JsonResponse
     {
         try {
             $cadastralUnit = $this->matrikkelenhetService->getMatrikkelenhetByMatrikkel($knr, $gnr, $bnr);
             return $this->jsonResponse([
-                'matrikkel_number' => "$knr-$gnr/$bnr",
-                'cadastral_unit' => $cadastralUnit
+                'matrikkelnummer' => "$knr-$gnr/$bnr",
+                'matrikkelenhet' => $cadastralUnit
             ]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 404);
@@ -279,16 +286,16 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get cadastral unit by matrikkel number with festenummer (knr-gnr/bnr/fnr)
+     * Hent matrikkelenhet med festenummer (knr-gnr/bnr/fnr)
      */
-    #[Route('/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}', name: 'cadastral_unit_with_feste', methods: ['GET'], requirements: ['knr' => '\d+', 'gnr' => '\d+', 'bnr' => '\d+', 'fnr' => '\d+'])]
+    #[Route('/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}', name: 'matrikkelenhet_med_festenummer', methods: ['GET'], requirements: ['knr' => '\d+', 'gnr' => '\d+', 'bnr' => '\d+', 'fnr' => '\d+'])]
     public function getCadastralUnitWithFeste(int $knr, int $gnr, int $bnr, int $fnr): JsonResponse
     {
         try {
             $cadastralUnit = $this->matrikkelenhetService->getMatrikkelenhetByMatrikkel($knr, $gnr, $bnr, $fnr);
             return $this->jsonResponse([
-                'matrikkel_number' => "$knr-$gnr/$bnr/$fnr",
-                'cadastral_unit' => $cadastralUnit
+                'matrikkelnummer' => "$knr-$gnr/$bnr/$fnr",
+                'matrikkelenhet' => $cadastralUnit
             ]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 404);
@@ -296,28 +303,28 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get cadastral unit by matrikkel number with section number (knr-gnr/bnr/fnr/snr)
+     * Hent matrikkelenhet med seksjonsnummer (knr-gnr/bnr/fnr/snr)
      */
-    #[Route('/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}/{snr}', name: 'cadastral_unit_with_section', methods: ['GET'], requirements: ['knr' => '\d+', 'gnr' => '\d+', 'bnr' => '\d+', 'fnr' => '\d+', 'snr' => '\d+'])]
+    #[Route('/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}/{snr}', name: 'matrikkelenhet_med_seksjonsnummer', methods: ['GET'], requirements: ['knr' => '\d+', 'gnr' => '\d+', 'bnr' => '\d+', 'fnr' => '\d+', 'snr' => '\d+'])]
     public function getCadastralUnitWithSection(int $knr, int $gnr, int $bnr, int $fnr, int $snr): JsonResponse
     {
         try {
             $cadastralUnit = $this->matrikkelenhetService->getMatrikkelenhetByMatrikkel($knr, $gnr, $bnr, $fnr, $snr);
             return $this->jsonResponse([
-                'matrikkel_number' => "$knr-$gnr/$bnr/$fnr/$snr",
-                'cadastral_unit' => $cadastralUnit
+                'matrikkelnummer' => "$knr-$gnr/$bnr/$fnr/$snr",
+                'matrikkelenhet' => $cadastralUnit
             ]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 404);
         }
     }
 
-    // ==================== CODE LIST ENDPOINTS ====================
+    // ==================== KODELISTE ENDPOINTS ====================
 
     /**
-     * Get code lists
+     * Hent alle kodelister
      */
-    #[Route('/codelist', name: 'codelists_get_all', methods: ['GET'])]
+    #[Route('/kodeliste', name: 'kodelister_hent_alle', methods: ['GET'])]
     public function getCodeLists(): JsonResponse
     {
         try {
@@ -329,8 +336,8 @@ class MatrikkelApiController extends AbstractController
             }, $codeLists);
             
             return $this->jsonResponse([
-                'code_lists' => $convertedCodeLists,
-                'count' => count($codeLists)
+                'kodelister' => $convertedCodeLists,
+                'antall' => count($codeLists)
             ]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 500);
@@ -338,9 +345,9 @@ class MatrikkelApiController extends AbstractController
     }
 
     /**
-     * Get code list by ID
+     * Hent kodeliste på ID
      */
-    #[Route('/codelist/{id}', name: 'codelist_get', methods: ['GET'], requirements: ['id' => '\d+'])]
+    #[Route('/kodeliste/{id}', name: 'kodeliste_hent', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function getCodeList(int $id): JsonResponse
     {
         try {
@@ -351,12 +358,12 @@ class MatrikkelApiController extends AbstractController
         }
     }
 
-    // ==================== GENERAL SEARCH ENDPOINT ====================
+    // ==================== SØK ENDPOINT ====================
 
     /**
-     * General search endpoint that supports both API and DB sources
+     * Generelt søk som støtter både API og DB kilder
      */
-    #[Route('/search', name: 'search', methods: ['GET'])]
+    #[Route('/sok', name: 'sok', methods: ['GET'])]
     public function search(Request $request): JsonResponse
     {
         $query = $request->query->get('q', '');
@@ -401,23 +408,41 @@ class MatrikkelApiController extends AbstractController
             
             // Only add next_offset and has_more if not getting all results
             if (!$getAllResults) {
-                $paginationInfo['next_offset'] = $offset + $limit;
-                $paginationInfo['has_more'] = count($results) === $limit; // If we got exactly the limit, there might be more
+                $paginationInfo['neste_offset'] = $offset + $limit;
+                $paginationInfo['har_flere'] = count($results) === $limit; // If we got exactly the limit, there might be more
             } else {
-                $paginationInfo['total_results'] = count($results);
-                $paginationInfo['has_more'] = false; // We got everything
+                $paginationInfo['totalt_antall'] = count($results);
+                $paginationInfo['har_flere'] = false; // We got everything
             }
 
             return $this->jsonResponse([
                 'query' => $query,
-                'source' => $source,
-                'results' => $convertedResults,
-                'count' => count($results),
-                'pagination' => $paginationInfo
+                'kilde' => $source,
+                'resultater' => $convertedResults,
+                'antall' => count($results),
+                'paginering' => $paginationInfo
             ]);
         } catch (\Exception $e) {
             return $this->jsonResponse(['error' => $e->getMessage()], 500);
         }
+    }
+
+    // ==================== FALLBACK / CATCH-ALL ====================
+
+    /**
+     * Fallback-rute for ugyldige API-stier
+     * Viser tilgjengelige endpoints når man aksesserer ikke-eksisterende ruter
+     */
+    #[Route('/{path}', name: 'api_fallback', requirements: ['path' => '.*'], priority: -1)]
+    public function fallback(string $path): JsonResponse
+    {
+        return $this->json([
+            'feil' => 'Rute ikke funnet',
+            'forespurt_sti' => '/api/v1/' . $path,
+            'melding' => 'Det forespurte API-endepunktet eksisterer ikke. Se tilgjengelige endepunkter nedenfor.',
+            'tilgjengelige_endepunkter' => $this->getAvailableEndpoints(),
+            'hint' => 'Besøk /api/v1/endpoints for full API-dokumentasjon'
+        ], 404);
     }
 
     // ==================== UTILITY METHODS ====================
