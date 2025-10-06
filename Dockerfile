@@ -64,6 +64,12 @@ RUN echo "allow_url_fopen = On" >> /usr/local/etc/php/php.ini \
     && echo "default_socket_timeout = 300" >> /usr/local/etc/php/php.ini \
     && echo "openssl.cafile = /etc/ssl/certs/ca-certificates.crt" >> /usr/local/etc/php/php.ini
 
+# Development PHP settings - disable OPcache for immediate code changes
+RUN echo "opcache.enable = 0" >> /usr/local/etc/php/php.ini \
+    && echo "opcache.enable_cli = 0" >> /usr/local/etc/php/php.ini \
+    && echo "opcache.validate_timestamps = 1" >> /usr/local/etc/php/php.ini \
+    && echo "opcache.revalidate_freq = 0" >> /usr/local/etc/php/php.ini
+
 # Configure Xdebug
 RUN echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
@@ -106,6 +112,9 @@ RUN mkdir -p /var/www/html/var/cache /var/www/html/var/log \
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
+
+# Don't warm up cache in dev - it will be built on demand
+# RUN php bin/console cache:warmup --env=dev --no-debug
 
 # Expose port 80
 EXPOSE 80

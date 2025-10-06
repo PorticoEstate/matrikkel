@@ -1,0 +1,6 @@
+# Development cache configuration - NO PERSISTENT CACHING
+framework:
+    cache:
+        # Array adapter = in-memory only, cleared after each request
+        app: cache.adapter.array
+        system: cache.adapter.array
