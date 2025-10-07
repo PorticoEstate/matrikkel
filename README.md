@@ -249,6 +249,8 @@ docker compose exec app php bin/console matrikkel:adresse-import
 If you prefer to use PostgreSQL instead of SQLite, you'll need to create the following tables manually:
 
 ```sql
+BEGIN;
+
 CREATE TABLE matrikkel_adresser (
   adresse_id BIGINT NOT NULL,
   fylkesnummer SMALLINT NOT NULL,
