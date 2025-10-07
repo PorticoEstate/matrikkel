@@ -13,7 +13,7 @@ class AdresseTable extends AbstractTable
 
     public function insertRow(array $row) : void {
         $this->adresseRows[] = [
-            'adresseId' => (int) $row[32],
+            'adresse_id' => (int) $row[32],
             'fylkesnummer' => floor((int) $row[1] / 100),
             'kommunenummer' => (int) $row[1],
             'kommunenavn' => $row[2],
@@ -27,10 +27,10 @@ class AdresseTable extends AbstractTable
             'festenummer' => (int) $row[12],
             'seksjonsnummer' => null,
             'undernummer' => (int) $row[13],
-            'adresseTekst' => $row[14],
+            'adresse_tekst' => $row[14],
             'epsg' => (int) $row[16],
             'nord' => (float) $row[17],
-            'øst' => (float) $row[18],
+            'ost' => (float) $row[18],
             'postnummer' => (int) $row[19],
             'poststed' => $row[20],
             'grunnkretsnavn' => $row[22],
@@ -46,7 +46,7 @@ class AdresseTable extends AbstractTable
     public function insertRowLeilighetsnivaa(array $row) : void
     {
         $this->adresseRows[] = [
-            'adresseId' => (int) $row[34],
+            'adresse_id' => (int) $row[34],
             'fylkesnummer' => floor((int) $row[0] / 100),
             'kommunenummer' => (int) $row[0],
             'kommunenavn' => $row[1],
@@ -60,10 +60,10 @@ class AdresseTable extends AbstractTable
             'festenummer' => (int) $row[11],
             'seksjonsnummer' => (int) $row[12],
             'undernummer' => (int) $row[13],
-            'adresseTekst' => $row[17],
+            'adresse_tekst' => $row[17],
             'epsg' => (int) $row[18],
             'nord' => (float) $row[19],
-            'øst' => (float) $row[20],
+            'ost' => (float) $row[20],
             'postnummer' => (int) $row[21],
             'poststed' => $row[22],
             'grunnkretsnavn' => $row[24],

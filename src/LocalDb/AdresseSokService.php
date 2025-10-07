@@ -103,9 +103,9 @@ class AdresseSokService {
 
 	public static function createMatrikkelSokObject(array $row) : Vegadresse {
 		return new Vegadresse([
-			'id' => $row['adresseId'],
-			'tittel' => $row['adresseTekst'] . ', ' . $row['poststed'],
-			'navn' => $row['adresseTekst'],
+			'id' => $row['adresse_id'],
+			'tittel' => $row['adresse_tekst'] . ', ' . $row['poststed'],
+			'navn' => $row['adresse_tekst'],
 			'tilhoerighet' => implode(', ', [
 				$row['poststed'],
 				$row['tettstednavn'],
@@ -116,7 +116,7 @@ class AdresseSokService {
 			'kommunenavn' => $row['kommunenavn'],
 			'epsg' => $row['epsg'],
 			'latitude' => $row['nord'],
-			'longitude' => $row['øst'],
+			'longitude' => $row['ost'],
 			'fylkesnr' => floor($row['kommunenummer']/100),
 			'fylkesnavn' => '', // Missing from csv
 			// 'objekttype' => '',

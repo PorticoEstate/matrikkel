@@ -12,7 +12,7 @@ class BruksenhetTable extends AbstractTable
 
     public function insertRow(array $row) : void {
         $this->adresseRows[] = [
-            'adresseId' => (int) $row[34],
+            'adresse_id' => (int) $row[34],
             'bruksenhet' => $row[15] ?: 'H0101',
         ];
 
