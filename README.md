@@ -204,7 +204,9 @@ All endpoints return JSON with this structure:
   "timestamp": "2025-10-03T13:57:21+00:00", 
   "status": "success"
 }
-```### Docker Commands
+```
+
+### Docker Commands
 
 ```bash
 # Start containers
