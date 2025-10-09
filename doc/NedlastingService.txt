@@ -1,0 +1,59 @@
+NedlastningServiceWS
+Tjenester for nedlastning av bobler av gitt type eller subtype.
+
+Abstrakte typer kan ikke benyttes som parameter i tjenesten.
+
+Ved uttrekk av historiske data så er ikke alle typer støttet.
+
+Data filtreres utfra bruker-roller.
+
+Spør man med hovedtype, for eksempel Matrikkelenhet, så får man med alle Grunneiendommer i resultatet. Det anbefales ikke å spørre på avledede typer.
+Namespace: http://matrikkel.statkart.no/matrikkelapi/wsapi/v1/service/nedlastning
+Oversikt
+
+    findIdsEtterId
+    findObjekterEtterId
+
+
+findIdsEtterId
+Tjeneste for å hente ut alle id-er per type. Klassen man skal hente ut id-er for angis ved domainklasse parameteren. Det benyttes pekerbasert paginering der matrikkelBubbleId bestemmer gjeldende plassering i id-sekvensen.
+
+For å filtrere på kommune bruker man filter-parameteren. Formatet på denne er følgende: {"kommunefilter": ["kommunenummer1","kommunenummer2"]}. Eksempel: {"kommunefilter": ["0233","0605"]}. Hvis filter er blankt vil det returneres id-er fra hele landet.
+
+Antall id-er som returneres kan være opp til angitt grense, men aldri over øvre tak. Dersom tom liste returneres har alt blitt hentet for gitt domainklasse og filter.
+Input
+
+    matrikkelBubbleId - Id med høyeste verdi klienten vet om fra før. Kan angi null her. Vil da få fra laveste treff.
+    domainklasse - Klasse det skal hentes id-er for.
+    filter - Filtrering av id-er på kommune.
+    maksAntall - Hvor mange id-er som kan returneres - maks 1_000_000.
+    matrikkelContext - Context for kallet.
+
+Response
+
+    return - Liste av id-er som oppfyller kravene i stigende rekkefølge.
+    MatrikkelBubbleIdList
+    ServiceException - ved applikasjonsfeil
+    ServiceException
+
+findObjekterEtterId
+Tjeneste for å hente ut alle objekter per type. Klassen man skal hente ut objekter for angis ved domainklasse parameteren. Det benyttes pekerbasert paginering der matrikkelBubbleId bestemmer gjeldende plassering i id-sekvensen.
+
+For å filtrere på kommune bruker man filter-parameteren. Formatet på denne er følgende: {"kommunefilter": ["kommunenummer1","kommunenummer2"]}. Eksempel: {"kommunefilter": ["0233","0605"]}. Hvis filter er blankt vil det returneres objekter fra hele landet.
+
+Antall elementer som returneres kan være opp til angitt grense, men aldri over øvre tak. Dersom tom liste returneres har alt blitt hentet for gitt domainklasse og filter.
+Input
+
+    matrikkelBubbleId - Id med høyeste verdi klienten vet om fra før. Kan angi null her. Vil da få fra laveste treff.
+    domainklasse - Klasse det skal hentes objekter for.
+    filter - Filtrering av objekter på kommune.
+    maksAntall - Hvor mange objekter som skal returneres - maks 5_000.
+    matrikkelContext - Context for kallet.
+
+Response
+
+    return - Liste av objekter som oppfyller kravene i stigende rekkefølge.
+    MatrikkelBubbleObjectList
+    ServiceException - ved applikasjonsfeil.
+    ServiceException
+

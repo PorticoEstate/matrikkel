@@ -1,0 +1,197 @@
+<?php
+/**
+ * Import service for Matrikkelenheter from Matrikkel API
+ * 
+ * Henter matrikkelenheter fra NedlastningServiceWS med kommune-filter
+ * og lagrer i database med eierforhold-informasjon.
+ * 
+ * @author Sigurd Nes
+ * @date 2025-10-08
+ */
+
+namespace Iaasen\Matrikkel\Service;
+
+use Iaasen\Matrikkel\Client\NedlastningClient;
+use Iaasen\Matrikkel\LocalDb\MatrikkelenhetTable;
+use Symfony\Component\Console\Style\SymfonyStyle;
+
+class MatrikkelenhetImportService
+{
+    public function __construct(
+        private NedlastningClient $nedlastningClient,
+        private MatrikkelenhetTable $matrikkelenhetTable
+    ) {}
+    
+    /**
+     * Import all matrikkelenheter for a specific kommune
+     * 
+     * @param SymfonyStyle $io Console I/O for progress reporting
+     * @param int $kommunenummer Kommune number (e.g. 301 for Oslo)
+     * @param int $batchSize Maximum objects per batch (default 1000)
+     * @return int Number of matrikkelenheter imported
+     */
+    public function importMatrikkelenheterForKommune(
+        SymfonyStyle $io, 
+        int $kommunenummer,
+        int $batchSize = 1000
+    ): int {
+        $io->text("Importerer matrikkelenheter for kommune $kommunenummer...");
+        
+        // Validate batch size (API max: 5000)
+        if ($batchSize > 5000) {
+            $io->warning("Batch-størrelse redusert fra $batchSize til 5000 (API-maksimum)");
+            $batchSize = 5000;
+        }
+        
+        $totalCount = 0;
+        $matrikkelBubbleCursor = null; // Start from beginning (as per API docs)
+        $batchNumber = 0;
+        
+        // Build kommune filter according to NedlastningService documentation
+        // Format: {"kommunefilter": ["kommunenummer1","kommunenummer2"]}
+        $kommunenummerPadded = str_pad($kommunenummer, 4, '0', STR_PAD_LEFT);
+        $filter = '{"kommunefilter": ["' . $kommunenummerPadded . '"]}';
+        
+        $io->text("  Filter: $filter");
+        $io->text("  Batch-størrelse: $batchSize (API maks: 5000)");
+        $io->newLine();
+        
+        try {
+            // Paginering: Fortsett å hente til vi får tom liste
+            // Bruker cursor-basert paginering med matrikkelBubbleId
+            do {
+                $batchNumber++;
+                
+                $batch = $this->nedlastningClient->findObjekterEtterId(
+                    $matrikkelBubbleCursor,
+                    'Matrikkelenhet',
+                    $filter,
+                    $batchSize
+                );
+                
+                $batchCount = count($batch);
+                
+                if ($batchCount > 0) {
+                    // Get last MatrikkelBubbleId for next batch (cursor-based pagination)
+                    $lastObject = end($batch);
+                    $matrikkelBubbleCursor = $lastObject->id ?? null;
+                    
+                    $cursorValue = $matrikkelBubbleCursor->value ?? ($matrikkelBubbleCursor['value'] ?? null);
+                    $io->text("  Batch $batchNumber: Hentet $batchCount objekter (siste MatrikkelBubbleId: " . ($cursorValue ?? 'ukjent') . ", totalt så langt: " . ($totalCount + $batchCount) . ")");
+                    
+                    // Process each matrikkelenhet
+                    foreach ($batch as $matrikkelenhet) {
+                        $this->matrikkelenhetTable->insertRow($matrikkelenhet);
+                        $totalCount++;
+                    }
+                    
+                    // Flush after each batch
+                    $this->matrikkelenhetTable->flush();
+                }
+                
+                // Continue if we got full batch (might be more data)
+            } while ($batchCount === $batchSize);
+            
+            $io->newLine();
+            $io->success("Import fullført! Hentet totalt $totalCount matrikkelenheter i $batchNumber batch(es)");
+            
+        } catch (\SoapFault $e) {
+            $io->error([
+                'SOAP-feil oppstod:',
+                '',
+                'Kode: ' . $e->faultcode,
+                '',
+                'Melding: ' . $e->faultstring,
+                '',
+                "Importerte $totalCount matrikkelenheter før feilen"
+            ]);
+
+            $lastRequestParams = $this->nedlastningClient->getLastRequestParams();
+            if ($lastRequestParams !== null) {
+                $io->section('Forsøker å hente rå SOAP-detaljer');
+                try {
+                    $wsdlKey = $_ENV['MATRIKKELAPI_ENVIRONMENT'] ?? 'prod';
+                    $wsdl = \Iaasen\Matrikkel\Client\NedlastningClient::WSDL[$wsdlKey] ?? reset(\Iaasen\Matrikkel\Client\NedlastningClient::WSDL);
+
+                    $debugClient = new \SoapClient($wsdl, [
+                        'login' => $_ENV['MATRIKKELAPI_LOGIN'] ?? null,
+                        'password' => $_ENV['MATRIKKELAPI_PASSWORD'] ?? null,
+                        'trace' => true,
+                        'exceptions' => true,
+                    ]);
+
+                    $debugParams = $lastRequestParams;
+                    $debugParams['matrikkelContext'] = $this->nedlastningClient->getMatrikkelContext();
+
+                    try {
+                        $debugClient->__soapCall('findObjekterEtterId', [$debugParams]);
+                    } catch (\SoapFault $debugFault) {
+                        // Expecting the same failure; ignore to allow logging below
+                    }
+
+                    $io->section('SOAP Request');
+                    $io->writeln('Headers:');
+                    $io->writeln($debugClient->__getLastRequestHeaders() ?: '[ingen headers tilgjengelig]');
+                    $io->newLine();
+                    $io->writeln('Body:');
+                    $io->writeln($debugClient->__getLastRequest() ?: '[ingen body tilgjengelig]');
+
+                    $io->section('SOAP Response');
+                    $io->writeln('Headers:');
+                    $io->writeln($debugClient->__getLastResponseHeaders() ?: '[ingen headers tilgjengelig]');
+                    $io->newLine();
+                    $io->writeln('Body:');
+                    $io->writeln($debugClient->__getLastResponse() ?: '[ingen body tilgjengelig]');
+                } catch (\Throwable $debugException) {
+                    $io->warning('Klarte ikke å hente rå SOAP-detaljer: ' . $debugException->getMessage());
+                }
+            }
+        }
+        
+        return $totalCount;
+    }
+    
+    /**
+     * Import matrikkelenheter for all kommuner
+     * 
+     * @param SymfonyStyle $io Console I/O for progress reporting
+     * @param array $kommuneNumre Array of kommune numbers to import
+     * @param int $batchSize Maximum objects per batch per kommune
+     * @return array Statistics: ['total' => int, 'per_kommune' => array]
+     */
+    public function importMatrikkelenheterForAlleKommuner(
+        SymfonyStyle $io,
+        array $kommuneNumre,
+        int $batchSize = 1000
+    ): array {
+        $io->section("Importerer matrikkelenheter for " . count($kommuneNumre) . " kommuner");
+        
+        $stats = [
+            'total' => 0,
+            'per_kommune' => []
+        ];
+        
+        foreach ($kommuneNumre as $kommunenummer) {
+            $io->text("Kommune $kommunenummer:");
+            
+            $count = $this->importMatrikkelenheterForKommune($io, $kommunenummer, $batchSize);
+            
+            $stats['total'] += $count;
+            $stats['per_kommune'][$kommunenummer] = $count;
+            
+            $io->text("  ✓ Importerte $count matrikkelenheter\n");
+        }
+        
+        return $stats;
+    }
+    
+    /**
+     * Verify imported matrikkelenheter in database
+     * 
+     * @return int Number of matrikkelenheter in database
+     */
+    public function verifyImport(): int
+    {
+        return $this->matrikkelenhetTable->countDbAddressRows();
+    }
+}

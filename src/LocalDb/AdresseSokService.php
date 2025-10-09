@@ -10,8 +10,13 @@ use Iaasen\DateTime;
 use Iaasen\Matrikkel\Entity\Matrikkelsok\Vegadresse;
 use Laminas\Db\Adapter\Adapter;
 
+/**
+ * Address search service that searches in both old (CSV) and new (SOAP API) address tables
+ * for backwards compatibility
+ */
 class AdresseSokService {
-    protected string $tableName = 'matrikkel_adresser';
+    protected string $oldTableName = 'old_matrikkel_adresser';
+    protected string $newTableName = 'matrikkel_adresser';
 
 	public function __construct(
 		protected Adapter $dbAdapter
@@ -64,11 +69,11 @@ class AdresseSokService {
 			$parameters[] = $context;
 		}
 
-		// Create the query
-		$table = $this->tableName;
+		// Create the query - search in OLD table (CSV-based)
+		$oldTable = $this->oldTableName;
 		$sql = <<<EOT
 		SELECT *
-		FROM $table
+		FROM $oldTable
 		EOT;
 
 		$i = 0;
@@ -97,6 +102,10 @@ class AdresseSokService {
 		foreach ($result as $row) {
 			$addresses[] = self::createMatrikkelSokObject($row);
 		}
+		
+		// TODO: In the future, also search in NEW table (matrikkel_adresser)
+		// and merge results, prioritizing newer SOAP API data
+		
 		return $addresses;
 	}
 
@@ -135,16 +144,21 @@ class AdresseSokService {
 
 
 	public function getLastDbUpdate() : ?DateTime {
-		$table = $this->tableName;
+		// Check both old and new tables, return earliest timestamp
+		$oldTable = $this->oldTableName;
+		$newTable = $this->newTableName;
+		
 		$sql = "
-			SELECT timestamp_created
-			FROM $table
-			ORDER BY timestamp_created ASC
-			LIMIT 1;
+			SELECT MIN(timestamp_created) as earliest
+			FROM (
+				SELECT timestamp_created FROM $oldTable
+				UNION ALL
+				SELECT timestamp_created FROM $newTable WHERE EXISTS (SELECT 1 FROM $newTable LIMIT 1)
+			) combined
 		";
 		$result = $this->dbAdapter->query($sql)->execute();
-		if(!$result->count()) return null;
-		return new DateTime($result->current()['timestamp_created']);
+		if(!$result->count() || !$result->current()['earliest']) return null;
+		return new DateTime($result->current()['earliest']);
 	}
 
 }

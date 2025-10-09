@@ -30,9 +30,14 @@ class AbstractTable
         $valueRows = [];
         foreach($uniqueRows as $adresseRow) {
             foreach($adresseRow AS $key => $column) {
-                // Escape single quotes for PostgreSQL
-                $column = str_replace("'", "''", $column);
-                $adresseRow[$key] = "'" . $column . "'";
+                // Handle NULL values
+                if ($column === null || $column === '') {
+                    $adresseRow[$key] = 'NULL';
+                } else {
+                    // Escape single quotes for PostgreSQL
+                    $column = str_replace("'", "''", $column);
+                    $adresseRow[$key] = "'" . $column . "'";
+                }
             }
             $valueRows[] .= '(' . implode(',', $adresseRow) . ')';
         }
@@ -44,23 +49,35 @@ class AbstractTable
         $this->cachedRows = 0;
     }
 
-    protected function deduplicateRows(array $rows) : array
+    private function deduplicateRows(array $rows): array
     {
-        // Determine primary key columns based on table name
-        $primaryKeyColumns = match($this->tableName) {
+        // Primary key kolonne for hver tabell
+        $primaryKeys = [
             'matrikkel_adresser' => ['adresse_id'],
+            'matrikkel_kommuner' => ['kommunenummer'],  // Unik naturlig nøkkel
+            'matrikkel_matrikkelenheter' => ['matrikkelenhet_id'],
             'matrikkel_bruksenheter' => ['adresse_id', 'bruksenhet'],
-            default => ['id']
-        };
+            'matrikkel_personer' => ['person_id'],
+            'matrikkel_juridiske_personer' => ['juridisk_person_id'],
+            // Standardverdi hvis ikke definert
+        ];
 
+        $primaryKeyCols = $primaryKeys[$this->tableName] ?? ['id'];
+
+        // Bygg en map med composite key => row data
         $uniqueRows = [];
         foreach ($rows as $row) {
-            // Create a composite key from primary key columns
-            $key = implode('|', array_map(fn($col) => $row[$col] ?? '', $primaryKeyColumns));
-            // Keep the last occurrence of each unique key (overwrites duplicates)
-            $uniqueRows[$key] = $row;
+            // Lag composite key fra primærnøkkelkolonnene
+            $keyParts = [];
+            foreach ($primaryKeyCols as $col) {
+                $keyParts[] = $row[$col] ?? '';
+            }
+            $compositeKey = implode('|', $keyParts);
+            
+            // Behold siste forekomst av hver unik primærnøkkel
+            $uniqueRows[$compositeKey] = $row;
         }
-
+        
         return array_values($uniqueRows);
     }
 
@@ -93,6 +110,10 @@ class AbstractTable
         $primaryKeyClause = match($this->tableName) {
             'matrikkel_adresser' => '"adresse_id"',
             'matrikkel_bruksenheter' => '"adresse_id", "bruksenhet"',
+            'matrikkel_kommuner' => '"kommunenummer"',  // Unik naturlig nøkkel
+            'matrikkel_matrikkelenheter' => '"matrikkelenhet_id"',
+            'matrikkel_personer' => '"person_id"',
+            'matrikkel_juridiske_personer' => '"juridisk_person_id"',
             default => '"id"'
         };
         

@@ -49,8 +49,19 @@ class AbstractSoapClient extends Client {
 			'brukOriginaleKoordinater' => false,
 			'koordinatsystemKodeId' => ['value' => 10], // See Representasjonspunkt::KOORDINATSYSTEM_KODE_ID_OPTIONS
 			'systemVersion' => '4.4',
-			'klientIdentifikasjon' => $this->getOptions()['login'],
-			'setSnapshotVersion' =>	new \DateTime('9999-01-01 00:00:00'),
+			'klientIdentifikasjon' => $this->getOptions()['login'] ?? null,
+			'snapshotVersion' => $this->getSnapshotVersionPayload(),
+		];
+	}
+
+	protected function getSnapshotVersionTimestamp(): string {
+		$timezone = new \DateTimeZone('Europe/Oslo');
+		return (new \DateTimeImmutable('9999-01-01 00:00:00', $timezone))->format('Y-m-d\TH:i:sP');
+	}
+
+	protected function getSnapshotVersionPayload(): array {
+		return [
+			'timestamp' => $this->getSnapshotVersionTimestamp(),
 		];
 	}
 

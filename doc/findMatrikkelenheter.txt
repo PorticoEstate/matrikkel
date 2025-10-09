@@ -1,0 +1,34 @@
+
+findMatrikkelenheter
+Finner id for alle matrikkelenheter som tilfredsstiller søkekriteriet oppgitt i MatrikkelenhetsokModel. Søkekriteriene omfatter søk utifra adresse, bygning, hjemmelshaver osv. Søkekriteriet må tilfredsstille bestemte krav, eksempelvis er det ikke tillatt å søke etter matrikkelenhet på hjemmelshaver kun ved fornavn, det kreves at også etternavnet oppgis.
+
+Generelle krav i søkemodell for matrikkelenhet:
+
+    Ikke tilstrekkelig med parametere når: KommuneId ikke er angitt eller mindre enn null OG personnr, fornavn og etternavn er ikke angitt OG bygningsnr ikke er angitt eller mindre enn null OG polygon ikke er valgt.
+    Må ha angitt søkekriterier, dvs. at en må søke på minst én av disse måtene:
+        Bygning angitt: Bygningsnummer eller løpenummer forskjellig fra null.
+        Adresse angitt: Adressekode, adressenavn, adressetilleggsnavn, nummer eller bokstav er forskjellig fra null.
+        Matrikkelnummer: Gårdsnr, bruksnr, festenr eller seksjonsnummer er forskjellig fra null.
+        Personer: Fornavn, etternavn eller personnummer er forskjellig fra null.
+        Bruksenhetsnummer: Forskjellig fra null.
+        Utvalgspolygon: Har valgt et polygon og dets KoordinatsystemKode er forskjellig fra null.
+        True boolean for MatrikkelenhetsokModel#jordskifteKrevd har jordskifte krevd, MatrikkelenhetsokModel#inngarISamlaFastEiendom inngår i samla fast eiendom, MatrikkelenhetsokModel#anmerketKlage har anmerket klage, MatrikkelenhetsokModel#grunnerverv har grunnerverv, MatrikkelenhetsokModel#harGrunnforurensing har grunnforurensing eller MatrikkelenhetsokModel#harKulturminne har kulturminne. 
+    Person: Kan ikke søke på kun fornavn, krever etternavn også.
+    Polygon: Må være korrekt angitt.
+    Må velge at rapporten skal gjelde for bestående og/eller utgåtte bygg.
+    Matrikkelnummer: Ingen av tallene (gårds-, bruks-, seksjons- og festenummer) kan ikke være mindre enn null.
+    Bruksenhetsnummer: Krever at vegadresse óg er oppgitt og må være gyldig.
+    Fonetikk: Kan ikke angi at adressenavn, adressetilleggsnavn eller navn er gitt fonetisk uten at tilhørende tekstfelt er fylt ut.
+
+Input
+
+    matrikkelenhetsokModel - Søkemodell som inneholder det oppgitte søkekriteriet til brukeren, f.eks. gårdsnummer og bruksnummer.
+    matrikkelContext - Context for kallet.
+
+Response
+
+    return - Liste av MatrikkelenhetId for matrikkelenhetene som tilfredsstiller søkekriteriene gitt i MatrikkelenhetsokModel.
+    MatrikkelenhetIdList
+    ServiceException - ved applikasjonsfeil
+    ServiceException
+

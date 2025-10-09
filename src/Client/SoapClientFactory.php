@@ -12,7 +12,7 @@ class SoapClientFactory {
 	public static function create(string $className) : AbstractSoapClient {
 		$options = [
 			'login' => $_ENV['MATRIKKELAPI_LOGIN'], 
-			'password' => $_ENV['MATRIKKELAPI_PASSWORD']
+			'password' => $_ENV['MATRIKKELAPI_PASSWORD'],
 		];
 		
 		// Add proxy configuration if available

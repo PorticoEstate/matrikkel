@@ -6,9 +6,13 @@
 
 namespace Iaasen\Matrikkel\LocalDb;
 
+/**
+ * LEGACY: CSV-based address import to old_matrikkel_adresser table
+ * For new SOAP API-based imports, use AdresseImportService instead
+ */
 class AdresseTable extends AbstractTable
 {
-    protected string $tableName = 'matrikkel_adresser';
+    protected string $tableName = 'old_matrikkel_adresser';
 
 
     public function insertRow(array $row) : void {
