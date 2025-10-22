@@ -73,19 +73,15 @@ class MatrikkelenhetTable extends AbstractTable
             'seksjonsnummer' => $seksjonsnummer,
             'matrikkelnummer_tekst' => $matrikkelnummerTekst,
             
-            // Eierforhold (normalisert - kun ID og type, ikke full data)
-            // Note: Hvis type er 'ukjent', lagrer vi ID-en i eier_person_id som standard
-            // Dette oppdateres til riktig kolonne når vi fetcher eieren via StoreService
-            'eier_type' => $eierInfo['type'],
-            'eier_person_id' => ($eierInfo['type'] === 'person' || $eierInfo['type'] === 'ukjent') && $eierInfo['id'] ? $eierInfo['id'] : null,
-            'eier_juridisk_person_id' => $eierInfo['type'] === 'juridisk_person' ? $eierInfo['id'] : null,
+            // NOTE: Eierforhold data is stored in separate matrikkel_eierforhold table
+            // (removed eier_type, eier_person_id, eier_juridisk_person_id)
             
             // Areal og eiendominformasjon
             'historisk_oppgitt_areal' => $historiskOppgittAreal,
             'areal_kilde' => $arealKilde,
             'tinglyst' => isset($matrikkelenhet->tinglyst) ? ($matrikkelenhet->tinglyst ? 't' : 'f') : 'f',
             'skyld' => isset($matrikkelenhet->skyld) ? (float)$matrikkelenhet->skyld : null,
-            'bruksnavn' => $matrikkelenhet->bruksnavn ?? null,
+            'bruksnavn' => $this->extractScalar($matrikkelenhet->bruksnavn ?? null),
             
             // Datoer
             'etableringsdato' => $this->extractDate($matrikkelenhet->etableringsdato ?? null),
@@ -233,5 +229,24 @@ class MatrikkelenhetTable extends AbstractTable
         }
         
         return null;
+    }
+    
+    /**
+     * Extract scalar value from mixed input
+     * Handles empty objects from json_decode(json_encode(simplexml))
+     */
+    private function extractScalar($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        
+        // If it's an object or array, it's probably empty - return null
+        if (is_object($value) || is_array($value)) {
+            return null;
+        }
+        
+        // Return as string
+        return (string)$value;
     }
 }

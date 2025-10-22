@@ -17,3 +17,5 @@ config/soap-client.php
 docker-compose.override.yml
 .docker/
 ###< docker ###
+
+.fake

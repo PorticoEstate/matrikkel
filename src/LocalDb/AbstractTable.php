@@ -34,6 +34,13 @@ class AbstractTable
                 if ($column === null || $column === '') {
                     $adresseRow[$key] = 'NULL';
                 } else {
+                    // Ensure column is scalar (string/number/boolean)
+                    if (is_object($column) || is_array($column)) {
+                        throw new \RuntimeException(
+                            "Non-scalar value for column '$key' in table {$this->tableName}: " . 
+                            gettype($column) . " " . print_r($column, true)
+                        );
+                    }
                     // Escape single quotes for PostgreSQL
                     $column = str_replace("'", "''", $column);
                     $adresseRow[$key] = "'" . $column . "'";
