@@ -11,6 +11,9 @@
 
 namespace Iaasen\Matrikkel\Client;
 
+// Prevent double-loading if this file gets included multiple times
+if (!class_exists('Iaasen\\Matrikkel\\Client\\MatrikkelBubbleId', false)) {
+
 /**
  * Base class for all MatrikkelBubbleId types
  * Used for cursor-based pagination in NedlastningService
@@ -74,6 +77,40 @@ class VegId extends MatrikkelBubbleId
  */
 class AdresseId extends MatrikkelBubbleId
 {
+}
+
+/**
+ * PersonIdent - Base class for person identification
+ */
+class PersonIdent
+{
+    // Abstract base class - use FysiskPersonIdent or JuridiskPersonIdent
+}
+
+/**
+ * FysiskPersonIdent - Physical person identification (fødselsnummer)
+ */
+class FysiskPersonIdent extends PersonIdent
+{
+    public $fodselsnummer;
+    
+    public function __construct($fodselsnummer = null)
+    {
+        $this->fodselsnummer = $fodselsnummer;
+    }
+}
+
+/**
+ * JuridiskPersonIdent - Legal entity identification (organisasjonsnummer)
+ */
+class JuridiskPersonIdent extends PersonIdent
+{
+    public $organisasjonsnummer;
+    
+    public function __construct($organisasjonsnummer = null)
+    {
+        $this->organisasjonsnummer = $organisasjonsnummer;
+    }
 }
 
 /**
@@ -148,3 +185,5 @@ class KoordinatsystemKodeId
         $this->value = $value;
     }
 }
+
+} // End class_exists check

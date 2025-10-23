@@ -116,11 +116,15 @@ class AbstractTable
         // Determine primary key based on table name
         $primaryKeyClause = match($this->tableName) {
             'matrikkel_adresser' => '"adresse_id"',
-            'matrikkel_bruksenheter' => '"adresse_id", "bruksenhet"',
-            'matrikkel_kommuner' => '"kommunenummer"',  // Unik naturlig nøkkel
+            'matrikkel_bruksenheter' => '"bruksenhet_id"',
+            'matrikkel_kommuner' => '"kommunenummer"',
             'matrikkel_matrikkelenheter' => '"matrikkelenhet_id"',
-            'matrikkel_personer' => '"person_id"',
-            'matrikkel_juridiske_personer' => '"juridisk_person_id"',
+            'matrikkel_personer' => '"matrikkel_person_id"',  // Changed from person_id
+            'matrikkel_fysiske_personer' => '"id"',
+            'matrikkel_juridiske_personer' => '"id"',
+            'matrikkel_bygninger' => '"bygning_id"',
+            'matrikkel_veger' => '"veg_id"',
+            'matrikkel_eierforhold' => '"id"',
             default => '"id"'
         };
         

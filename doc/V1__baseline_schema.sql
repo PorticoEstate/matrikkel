@@ -296,7 +296,6 @@ CREATE INDEX idx_bygning_matrikkelenhet_matrikkelenhet ON matrikkel_bygning_matr
 
 CREATE TABLE matrikkel_bruksenheter (
     bruksenhet_id BIGINT PRIMARY KEY,
-    bygning_id BIGINT NOT NULL,
     matrikkelenhet_id BIGINT NOT NULL,
     lopenummer INTEGER,
     uuid VARCHAR(36),

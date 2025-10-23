@@ -11,17 +11,8 @@ use Iaasen\Exception\NotAuthenticatedException;
 use Iaasen\Exception\NotFoundException;
 use Laminas\Soap\Client;
 
-// Import Matrikkel type classes for classmap
-use Iaasen\Matrikkel\Client\MatrikkelBubbleId;
-use Iaasen\Matrikkel\Client\MatrikkelenhetId;
-use Iaasen\Matrikkel\Client\PersonId;
-use Iaasen\Matrikkel\Client\BygningId;
-use Iaasen\Matrikkel\Client\BruksenhetId;
-use Iaasen\Matrikkel\Client\VegId;
-use Iaasen\Matrikkel\Client\AdresseId;
-use Iaasen\Matrikkel\Client\SnapshotVersion;
-use Iaasen\Matrikkel\Client\MatrikkelContext;
-use Iaasen\Matrikkel\Client\KoordinatsystemKodeId;
+// Load Matrikkel type classes (protected against double-loading)
+require_once __DIR__ . '/MatrikkelTypes.php';
 
 class AbstractSoapClient extends Client {
 
@@ -37,19 +28,25 @@ class AbstractSoapClient extends Client {
 	/**
 	 * Get classmap for automatic SOAP type serialization
 	 * Maps XML types to PHP classes
+	 * 
+	 * All type classes are defined in MatrikkelTypes.php in same namespace
 	 */
 	protected function getMatrikkelClassMap(): array {
+		$ns = 'Iaasen\\Matrikkel\\Client\\';
 		return [
-			'MatrikkelBubbleId' => MatrikkelBubbleId::class,
-			'MatrikkelenhetId' => MatrikkelenhetId::class,
-			'PersonId' => PersonId::class,
-			'BygningId' => BygningId::class,
-			'BruksenhetId' => BruksenhetId::class,
-			'VegId' => VegId::class,
-			'AdresseId' => AdresseId::class,
-			'SnapshotVersion' => SnapshotVersion::class,
-			'MatrikkelContext' => MatrikkelContext::class,
-			'KoordinatsystemKodeId' => KoordinatsystemKodeId::class,
+			'MatrikkelBubbleId' => $ns . 'MatrikkelBubbleId',
+			'MatrikkelenhetId' => $ns . 'MatrikkelenhetId',
+			'PersonId' => $ns . 'PersonId',
+			'BygningId' => $ns . 'BygningId',
+			'BruksenhetId' => $ns . 'BruksenhetId',
+			'VegId' => $ns . 'VegId',
+			'AdresseId' => $ns . 'AdresseId',
+			'SnapshotVersion' => $ns . 'SnapshotVersion',
+			'MatrikkelContext' => $ns . 'MatrikkelContext',
+			'KoordinatsystemKodeId' => $ns . 'KoordinatsystemKodeId',
+			'PersonIdent' => $ns . 'PersonIdent',
+			'FysiskPersonIdent' => $ns . 'FysiskPersonIdent',
+			'JuridiskPersonIdent' => $ns . 'JuridiskPersonIdent',
 		];
 	}
 

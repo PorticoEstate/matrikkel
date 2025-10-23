@@ -28,12 +28,14 @@ class MatrikkelenhetImportService
      * @param SymfonyStyle $io Console I/O for progress reporting
      * @param int $kommunenummer Kommune number (e.g. 301 for Oslo)
      * @param int $batchSize Maximum objects per batch (default 1000)
+     * @param int|null $limit Maximum total objects to import (null = all, for testing)
      * @return int Number of matrikkelenheter imported
      */
     public function importMatrikkelenheterForKommune(
         SymfonyStyle $io, 
         int $kommunenummer,
-        int $batchSize = 1000
+        int $batchSize = 1000,
+        ?int $limit = null
     ): int {
         $io->text("Importerer matrikkelenheter for kommune $kommunenummer...");
         
@@ -41,6 +43,15 @@ class MatrikkelenhetImportService
         if ($batchSize > 5000) {
             $io->warning("Batch-størrelse redusert fra $batchSize til 5000 (API-maksimum)");
             $batchSize = 5000;
+        }
+        
+        if ($limit !== null) {
+            $io->text("LIMIT aktivert: Maks $limit matrikkelenheter vil bli importert (test mode)");
+            // Adjust batch size to not exceed limit
+            if ($batchSize > $limit) {
+                $io->text("  → Batch-størrelse redusert til $limit (matchende limit)");
+                $batchSize = $limit;
+            }
         }
         
         $totalCount = 0;
@@ -62,17 +73,30 @@ class MatrikkelenhetImportService
             do {
                 $batchNumber++;
                 
+                // Calculate remaining if limit is set
+                if ($limit !== null) {
+                    $remaining = $limit - $totalCount;
+                    if ($remaining <= 0) {
+                        $io->note("LIMIT nådd: $totalCount matrikkelenheter importert (limit: $limit). Stopper import.");
+                        break;
+                    }
+                    // Adjust current batch size to not exceed limit
+                    $currentBatchSize = min($batchSize, $remaining);
+                } else {
+                    $currentBatchSize = $batchSize;
+                }
+                
                 $cursorDisplay = $matrikkelBubbleCursor && is_object($matrikkelBubbleCursor) 
                     ? ($matrikkelBubbleCursor->value ?? 'object') 
                     : ($matrikkelBubbleCursor ?? 'null');
-                $io->text("  → Henter batch $batchNumber (cursor: $cursorDisplay)...");
+                $io->text("  → Henter batch $batchNumber (cursor: $cursorDisplay, size: $currentBatchSize)...");
                 
                 // Use classmap-based method - simpler and more reliable!
                 $batch = $this->nedlastningClient->findObjekterEtterIdWithClassMap(
                     $matrikkelBubbleCursor,  // MatrikkelBubbleId object (or null for first batch)
                     'Matrikkelenhet',
                     $filter,
-                    $batchSize
+                    $currentBatchSize
                 );
                 
                 $batchCount = count($batch);

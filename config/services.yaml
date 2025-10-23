@@ -37,6 +37,9 @@ services:
     Iaasen\Matrikkel\Client\BruksenhetClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\BruksenhetClient ]
+    Iaasen\Matrikkel\Client\BygningClient:
+        factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
+        arguments: [ Iaasen\Matrikkel\Client\BygningClient ]
     Iaasen\Matrikkel\Client\KommuneClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\KommuneClient ]
@@ -55,6 +58,9 @@ services:
     Iaasen\Matrikkel\Client\NedlastningClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\NedlastningClient ]
+    Iaasen\Matrikkel\Client\PersonClient:
+        factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
+        arguments: [ Iaasen\Matrikkel\Client\PersonClient ]
 
     # Laminas DB Adapter configuration
     #Laminas\Db\Adapter\Adapter:
@@ -71,6 +77,11 @@ services:
                 port: 5435
                 username: '%env(DB_USERNAME)%'
                 password: '%env(DB_PASSWORD)%'
+
+    # PDO service for direct database access
+    PDO:
+        class: PDO
+        factory: ['Iaasen\Matrikkel\Service\PdoFactory', 'create']
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
