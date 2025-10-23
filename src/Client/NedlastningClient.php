@@ -416,15 +416,14 @@ class NedlastningClient extends AbstractSoapClient {
 		}
 
 		if (is_array($matrikkelBubbleId)) {
-			// Always ensure snapshotVersion is present, even if missing from API response
-			$matrikkelBubbleId['snapshotVersion'] = $this->getSnapshotVersionPayload();
+			// NedlastningService: MatrikkelBubbleId has ONLY 'value', NO 'snapshotVersion'
+			// Keep array as-is (should already have correct structure)
 			return $matrikkelBubbleId;
 		}
 
 		if (is_object($matrikkelBubbleId)) {
+			// Convert object to array, preserve structure
 			$normalized = json_decode(json_encode($matrikkelBubbleId), true);
-			// Always ensure snapshotVersion is present, even if missing from API response
-			$normalized['snapshotVersion'] = $this->getSnapshotVersionPayload();
 			return $normalized;
 		}
 
@@ -433,18 +432,9 @@ class NedlastningClient extends AbstractSoapClient {
 			return null;
 		}
 
-		// Use SoapVar for proper serialization as we did in manual tests
-		$namespace = "http://matrikkel.statkart.no/matrikkelapi/wsapi/v1/domain";
-		$timestamp = $this->getSnapshotVersionTimestamp();
-		
-		$snapshotVersion = new \SoapVar([
-			'timestamp' => $timestamp
-		], SOAP_ENC_OBJECT, "Timestamp", $namespace);
-		
-		return new \SoapVar([
-			'value' => $numericValue,
-			'snapshotVersion' => $snapshotVersion
-		], SOAP_ENC_OBJECT, "MatrikkelBubbleId", $namespace);
+		// NedlastningService: Simple MatrikkelBubbleId structure with ONLY 'value'
+		// NO snapshotVersion! (unlike StoreService)
+		return ['value' => $numericValue];
 	}
 	
 	/**

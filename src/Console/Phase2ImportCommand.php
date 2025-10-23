@@ -29,6 +29,8 @@ namespace Iaasen\Matrikkel\Console;
 use Iaasen\Matrikkel\Service\MatrikkelenhetFilterService;
 use Iaasen\Matrikkel\Service\BruksenhetImportService;
 use Iaasen\Matrikkel\Service\BygningImportService;
+use Iaasen\Matrikkel\Service\VegImportService;
+use Iaasen\Matrikkel\Service\AdresseImportService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -46,6 +48,8 @@ class Phase2ImportCommand extends Command
         private MatrikkelenhetFilterService $matrikkelenhetFilterService,
         private BruksenhetImportService $bruksenhetImportService,
         private BygningImportService $bygningImportService,
+        private VegImportService $vegImportService,
+        private AdresseImportService $adresseImportService,
     ) {
         parent::__construct();
     }
@@ -78,15 +82,35 @@ class Phase2ImportCommand extends Command
                 'Batch size for bulk downloads (max 5000)',
                 5000
             )
+            ->addOption(
+                'limit',
+                'l',
+                InputOption::VALUE_OPTIONAL,
+                'Limit total number of matrikkelenheter to process (for testing)',
+                null
+            )
             ->setHelp(<<<'HELP'
 <info>Phase 2: Filtered Import</info>
 
+⚠️  IMPORTANT: Phase 2 depends on Phase 1!
+Phase 2 queries the database for matrikkelenheter that were imported by Phase 1.
+You MUST run Phase 1 first, or Phase 2 will have nothing to filter!
+
 This command imports detailed data (bygninger, bruksenheter, adresser) for 
-matrikkelenheter owned by specific persons or organizations.
+matrikkelenheter that exist in the database.
 
 <comment>Prerequisites:</comment>
-  Run Phase 1 first to import base data:
-  php bin/console matrikkel:phase1-import --kommune=4601
+  1. Run Phase 1 first to import matrikkelenheter:
+     php bin/console matrikkel:phase1-import --kommune=4601 --organisasjonsnummer=964338531
+  
+  2. Then run Phase 2 to import details:
+     php bin/console matrikkel:phase2-import --kommune=4601 --organisasjonsnummer=964338531
+
+<comment>How it works:</comment>
+  Phase 1: Downloads matrikkelenheter (with optional owner filter)
+  Phase 2: Queries database for those matrikkelenheter, then downloads their details
+  
+  Phase 2 does NOT call the API to find matrikkelenheter - it reads from database!
 
 <comment>Import Strategy:</comment>
   1. <fg=cyan>Veger</fg=cyan>: Bulk download (entire kommune) - needed for adresser
@@ -122,6 +146,7 @@ HELP
         $personnummer = $input->getOption('personnummer');
         $organisasjonsnummer = $input->getOption('organisasjonsnummer');
         $batchSize = (int)$input->getOption('batch-size');
+        $limit = $input->getOption('limit') ? (int)$input->getOption('limit') : null;
         
         if (!$kommune) {
             $io->error('--kommune option is required');
@@ -134,6 +159,7 @@ HELP
         $io->text([
             'Kommune: ' . $kommunenummer,
             'Batch size: ' . $batchSize,
+            'Limit: ' . ($limit ? $limit . ' matrikkelenheter' : 'none'),
             'Filter: ' . ($personnummer ? "personnummer=$personnummer" : 
                          ($organisasjonsnummer ? "organisasjonsnummer=$organisasjonsnummer" : 'none (all)')),
         ]);
@@ -157,13 +183,22 @@ HELP
                 return Command::FAILURE;
             }
             
+            // Apply limit if specified
+            if ($limit && count($filteredMatrikkelenheter) > $limit) {
+                $io->note(sprintf('Limiting from %d to %d matrikkelenheter for testing', 
+                    count($filteredMatrikkelenheter), $limit));
+                $filteredMatrikkelenheter = array_slice($filteredMatrikkelenheter, 0, $limit);
+            }
+            
             $io->success('Filtrert til ' . count($filteredMatrikkelenheter) . ' matrikkelenheter');
             $io->newLine();
             
             // Step 2: Import veger (bulk download - entire kommune)
+            // CRITICAL: Must happen BEFORE adresser!
             $io->section('Step 2/5: Importing veger (bulk download)');
-            $io->warning('Veg import not yet implemented');
-            // TODO: $vegCount = $this->vegImportService->importVegerForKommune($io, $kommunenummer, $batchSize);
+            $io->text('Veger must be imported before adresser due to foreign key constraints');
+            $vegCount = $this->vegImportService->importVegerForKommune($kommunenummer);
+            $io->success(sprintf('Imported veger: %d', $vegCount));
             
             // Step 3: Import bruksenheter (API-filtered)
             $io->section('Step 3/5: Importing bruksenheter (API-filtered)');
@@ -187,8 +222,19 @@ HELP
             
             // Step 5: Import adresser (API-filtered)
             $io->section('Step 5/5: Importing adresser (API-filtered)');
-            $io->warning('Adresse import not yet implemented');
-            // TODO: $adresseCount = $this->adresseImportService->importAdresserForMatrikkelenheter(...);
+            $io->text('Adresser depend on veger being in database (FK constraint for vegadresser)');
+            
+            // $filteredMatrikkelenheter is already array of matrikkelenhet_id integers
+            $adresseResult = $this->adresseImportService->importAdresserForMatrikkelenheter(
+                $io,
+                $kommunenummer,
+                $filteredMatrikkelenheter  // Already array of IDs
+            );
+            $io->success(sprintf(
+                'Imported adresser: %d (with %d M:N relations to matrikkelenheter)',
+                $adresseResult['adresser'],
+                $adresseResult['relations']
+            ));
             
             $duration = round(microtime(true) - $startTime, 2);
             
@@ -197,15 +243,10 @@ HELP
                 'Phase 2 import complete!',
                 "Duration: {$duration}s",
                 "Filtered matrikkelenheter: " . count($filteredMatrikkelenheter),
+                "Imported veger: $vegCount",
                 "Imported bruksenheter: $bruksenhetCount",
-            ]);
-            
-            $io->note([
-                'Next steps:',
-                '- Implement VegImportService, BygningImportService, etc.',
-                '- These will use the filtered matrikkelenhet list',
-                '',
-                'Filtered matrikkelenheter: ' . count($filteredMatrikkelenheter),
+                "Imported bygninger: {$result['bygninger']} (+ {$result['relations']} relations)",
+                "Imported adresser: {$adresseResult['adresser']} (+ {$adresseResult['relations']} relations)",
             ]);
             
             return Command::SUCCESS;

@@ -2,19 +2,20 @@
 /**
  * MatrikkelenhetFilterService - Filter matrikkelenheter by owner
  * 
- * This is the KEY service for Phase 2! Instead of downloading ALL data for
- * a kommune, we filter to only matrikkelenheter owned by specific persons
- * or organizations.
+ * This is the KEY service for Phase 2! Phase 2 depends on Phase 1 having
+ * already imported matrikkelenheter to the database.
  * 
- * Two-Step Server-Side Filtering:
- * 1. PersonClient.findPersonIdByNummer(organisasjonsnummer) -> PersonId
- * 2. MatrikkelenhetClient.findMatrikkelenheterForOrganisasjon(PersonId) -> [MatrikkelenhetIds]
+ * Database-Based Filtering:
+ * Phase 2 queries the local database to find matrikkelenheter owned by
+ * specific persons or organizations. The eierforhold data is stored as JSON
+ * in the matrikkel_matrikkelenheter.eierforhold column.
  * 
- * Result: Only download data for ~100 matrikkelenheter instead of 116,000!
+ * Workflow:
+ * 1. Phase 1: Import matrikkelenheter (with --organisasjonsnummer filter if needed)
+ * 2. Phase 2: Query database for matrikkelenheter owned by specific owner
+ * 3. Phase 2: Import bruksenheter, bygninger, adresser for filtered matrikkelenheter
  * 
- * Database fallback:
- * If Phase 1 has already populated eierforhold in database, we can also
- * query locally for even faster filtering.
+ * Result: Only download detail data for relevant matrikkelenheter!
  * 
  * @author Matrikkel Integration System
  * @date 2025-01-23
@@ -22,33 +23,26 @@
 
 namespace Iaasen\Matrikkel\Service;
 
-use Iaasen\Matrikkel\Client\PersonClient;
-use Iaasen\Matrikkel\Client\MatrikkelenhetClient;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use PDO;
 
 class MatrikkelenhetFilterService
 {
-    private PersonClient $personClient;
-    private MatrikkelenhetClient $matrikkelenhetClient;
     private PDO $db;
     
-    public function __construct(
-        PersonClient $personClient,
-        MatrikkelenhetClient $matrikkelenhetClient,
-        PDO $db
-    ) {
-        $this->personClient = $personClient;
-        $this->matrikkelenhetClient = $matrikkelenhetClient;
+    public function __construct(PDO $db)
+    {
         $this->db = $db;
     }
     
     /**
-     * Filter matrikkelenheter by owner (SERVER-SIDE via Matrikkel API)
+     * Filter matrikkelenheter by owner (DATABASE query)
      * 
-     * This is the Phase 2 magic! Instead of downloading 116,000 matrikkelenheter
-     * and filtering locally, we ask Matrikkel API: "Which matrikkelenheter does
-     * organisation X own?" and get back only ~100 IDs.
+     * Phase 2 depends on Phase 1! This method queries the local database
+     * for matrikkelenheter that were already imported by Phase 1.
+     * 
+     * If filters are provided, it searches the eierforhold JSON column.
+     * If no filters, it returns ALL matrikkelenheter for the kommune.
      * 
      * @param SymfonyStyle $io Console output
      * @param int $kommunenummer Kommune number
@@ -81,11 +75,12 @@ class MatrikkelenhetFilterService
     }
     
     /**
-     * Filter matrikkelenheter by organisation (SERVER-SIDE)
+     * Filter matrikkelenheter by organisasjon (DATABASE-based)
      * 
-     * Two-step API pattern:
-     * 1. PersonClient.findPersonIdByOrganisasjonsnummer() -> PersonId or null
-     * 2. MatrikkelenhetClient.findMatrikkelenheterForOrganisasjon() -> [MatrikkelenhetIds]
+     * Phase 2 assumes Phase 1 has already imported matrikkelenheter to database.
+     * This method queries the local database instead of calling the API.
+     * 
+     * Uses the matrikkel_eierforhold junction table to find ownership.
      * 
      * @param SymfonyStyle $io
      * @param int $kommunenummer
@@ -94,82 +89,80 @@ class MatrikkelenhetFilterService
      */
     private function filterByOrganisasjon(SymfonyStyle $io, int $kommunenummer, string $organisasjonsnummer): array
     {
-        $io->text("Step 1/2: Finner PersonId for organisasjonsnummer...");
+        $io->text("Filtrerer matrikkelenheter fra DATABASE for organisasjonsnummer: $organisasjonsnummer");
         
-        // Step 1: Find PersonId in Matrikkel
-        $personId = $this->personClient->findPersonIdByOrganisasjonsnummer($organisasjonsnummer);
-        
-        if ($personId === null) {
-            $io->warning("Organisasjon $organisasjonsnummer er ikke registrert som eier i Matrikkel.");
-            $io->note("Dette kan bety at organisasjonen ikke eier noen matrikkelenheter i Norge.");
+        // Query database for matrikkelenheter owned by this organization
+        // Uses matrikkel_eierforhold junction table to find ownership
+        try {
+            $sql = "
+                SELECT DISTINCT m.matrikkelenhet_id 
+                FROM matrikkel_matrikkelenheter m
+                INNER JOIN matrikkel_eierforhold e ON m.matrikkelenhet_id = e.matrikkelenhet_id
+                INNER JOIN matrikkel_personer p ON e.person_id = p.matrikkel_person_id
+                WHERE m.kommunenummer = :kommunenummer
+                AND p.nummer = :nummer
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'kommunenummer' => $kommunenummer,
+                'nummer' => $organisasjonsnummer
+            ]);
+            
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $matrikkelenhetIds = array_map(fn($row) => (int)$row['matrikkelenhet_id'], $rows);
+            
+            $io->success("Funnet " . count($matrikkelenhetIds) . " matrikkelenheter for organisasjon i database");
+            
+            return $matrikkelenhetIds;
+            
+        } catch (\Exception $e) {
+            $io->error("Feil ved søk i database: " . $e->getMessage());
+            $io->warning("Har du kjørt Phase 1 først? Phase 2 krever at matrikkelenheter er importert.");
             return [];
         }
-        
-        $io->success("Funnet PersonId: " . ($personId->value ?? 'unknown'));
-        
-        $io->text("Step 2/2: Henter matrikkelenheter for organisasjon (SERVER-SIDE filter)...");
-        
-        // Step 2: Get matrikkelenheter for this PersonId
-        $matrikkelenhetIdObjects = $this->matrikkelenhetClient->findMatrikkelenheterForOrganisasjon($personId);
-        
-        // Extract numeric IDs
-        $matrikkelenhetIds = [];
-        foreach ($matrikkelenhetIdObjects as $idObj) {
-            if (isset($idObj->value)) {
-                $matrikkelenhetIds[] = (int)$idObj->value;
-            }
-        }
-        
-        // Filter to only those in the specified kommune
-        // (API may return matrikkelenheter from other kommuner)
-        if (!empty($matrikkelenhetIds)) {
-            $matrikkelenhetIds = $this->filterToKommune($matrikkelenhetIds, $kommunenummer);
-        }
-        
-        $io->success("Funnet " . count($matrikkelenhetIds) . " matrikkelenheter for organisasjon i kommune $kommunenummer");
-        
-        return $matrikkelenhetIds;
-    }
-    
-    /**
-     * Filter matrikkelenheter by person (SERVER-SIDE)
+    }    /**
+     * Filter matrikkelenheter by person (DATABASE-based)
+     * 
+     * Phase 2 assumes Phase 1 has already imported matrikkelenheter to database.
+     * This method queries the local database instead of calling the API.
+     * 
+     * Uses the matrikkel_eierforhold junction table to find ownership.
      */
     private function filterByPerson(SymfonyStyle $io, int $kommunenummer, string $personnummer): array
     {
-        $io->text("Step 1/2: Finner PersonId for personnummer...");
+        $io->text("Filtrerer matrikkelenheter fra DATABASE for personnummer: $personnummer");
         
-        // Step 1: Find PersonId in Matrikkel
-        $personId = $this->personClient->findPersonIdByFodselsnummer($personnummer);
-        
-        if ($personId === null) {
-            $io->warning("Person $personnummer er ikke registrert som eier i Matrikkel.");
-            $io->note("Dette kan bety at personen ikke eier noen matrikkelenheter i Norge.");
+        // Query database for matrikkelenheter owned by this person
+        // Uses matrikkel_eierforhold junction table to find ownership
+        try {
+            $sql = "
+                SELECT DISTINCT m.matrikkelenhet_id 
+                FROM matrikkel_matrikkelenheter m
+                INNER JOIN matrikkel_eierforhold e ON m.matrikkelenhet_id = e.matrikkelenhet_id
+                INNER JOIN matrikkel_personer p ON e.person_id = p.matrikkel_person_id
+                WHERE m.kommunenummer = :kommunenummer
+                AND p.nummer = :nummer
+            ";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'kommunenummer' => $kommunenummer,
+                'nummer' => $personnummer
+            ]);
+            
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $matrikkelenhetIds = array_map(fn($row) => (int)$row['matrikkelenhet_id'], $rows);
+            
+            $io->success("Funnet " . count($matrikkelenhetIds) . " matrikkelenheter for person i database");
+            
+            return $matrikkelenhetIds;
+            
+        } catch (\Exception $e) {
+            $io->error("Feil ved søk i database: " . $e->getMessage());
+            $io->warning("Har du kjørt Phase 1 først? Phase 2 krever at matrikkelenheter er importert.");
             return [];
         }
-        
-        $io->success("Funnet PersonId: " . ($personId->value ?? 'unknown'));
-        
-        $io->text("Step 2/2: Henter matrikkelenheter for person (SERVER-SIDE filter)...");
-        
-        // Step 2: Get matrikkelenheter for this PersonId
-        $matrikkelenhetIdObjects = $this->matrikkelenhetClient->findMatrikkelenheterForPerson($personId);
-        
-        // Extract numeric IDs
-        $matrikkelenhetIds = [];
-        foreach ($matrikkelenhetIdObjects as $idObj) {
-            if (isset($idObj->value)) {
-                $matrikkelenhetIds[] = (int)$idObj->value;
-            }
-        }
-        
-        // Filter to only those in the specified kommune
-        if (!empty($matrikkelenhetIds)) {
-            $matrikkelenhetIds = $this->filterToKommune($matrikkelenhetIds, $kommunenummer);
-        }
-        
-        $io->success("Funnet " . count($matrikkelenhetIds) . " matrikkelenheter for person i kommune $kommunenummer");
-        
-        return $matrikkelenhetIds;
     }
     
     /**

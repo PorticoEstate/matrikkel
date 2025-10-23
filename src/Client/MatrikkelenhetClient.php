@@ -45,18 +45,68 @@ class MatrikkelenhetClient extends AbstractSoapClient
     ];
     
     /**
+     * Finn matrikkelenheter basert på nummerForPerson (personnummer eller organisasjonsnummer)
+     * 
+     * Denne metoden bruker MatrikkelenhetService.findMatrikkelenheter() operation
+     * med MatrikkelenhetsokModel parameter. Dette er den RIKTIGE metoden for å finne
+     * matrikkelenheter eid av en person eller organisasjon.
+     * 
+     * @param int $kommunenummer Kommunenummer (f.eks. 4601 for Bergen)
+     * @param string $nummerForPerson Personnummer eller organisasjonsnummer
+     * @return array Array av MatrikkelenhetId objekter
+     * @throws \SoapFault Hvis API-feil
+     */
+    public function findMatrikkelenheterByNummerForPerson(int $kommunenummer, string $nummerForPerson): array
+    {
+        $params = [
+            'matrikkelenhetsokModel' => [
+                'kommunenummer' => (string) $kommunenummer,
+                'nummerForPerson' => $nummerForPerson
+            ],
+            'matrikkelContext' => $this->getMatrikkelContext()
+        ];
+        
+        error_log("[MatrikkelenhetClient] Request params: " . json_encode($params, JSON_PRETTY_PRINT));
+        
+        try {
+            $response = $this->__call('findMatrikkelenheter', [$params]);
+            
+            error_log("[MatrikkelenhetClient] Raw response: " . print_r($response, true));
+            error_log("[MatrikkelenhetClient] Last request XML: " . $this->getLastRequest());
+            error_log("[MatrikkelenhetClient] Last response XML: " . substr($this->getLastResponse(), 0, 2000));
+            
+            // Parse response - returns MatrikkelenhetIdList
+            $items = [];
+            if (isset($response->return)) {
+                // API returns ->item (SINGULAR) not ->items (PLURAL)!
+                if (isset($response->return->item)) {
+                    $ids = $response->return->item;
+                    
+                    // Normalize to array
+                    if (!is_array($ids)) {
+                        $ids = [$ids];
+                    }
+                    
+                    $items = $ids;
+                }
+            }
+            
+            error_log("[MatrikkelenhetClient] Found " . count($items) . " matrikkelenheter for nummerForPerson=$nummerForPerson in kommune $kommunenummer");
+            return $items;
+            
+        } catch (\SoapFault $e) {
+            error_log("[MatrikkelenhetClient::findMatrikkelenheterByNummerForPerson] SOAP Fault: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
      * Finn matrikkelenheter eid av en person (SERVER-SIDE FILTRERING)
      * 
-     * Dette er Phase 2 nøkkelmetode! I stedet for:
-     * - Last ned alle 50,000 matrikkelenheter for Bergen
-     * - Filtrer lokalt til de 3 som eies av person X
+     * DEPRECATED: Use findMatrikkelenheterByNummerForPerson() instead.
+     * This method uses findEideMatrikkelenheterForPerson() which doesn't work reliably for juridiske personer.
      * 
-     * Gjør vi:
-     * - Spør API: "Hvilke matrikkelenheter eier person X?"
-     * - Få tilbake kun 3 ID-er
-     * - Hent kun disse 3 komplette objektene
-     * 
-     * @param PersonId $personId ID for fysisk person (fødselsnummer)
+     * @param PersonId $personId ID for person (fysisk eller juridisk)
      * @return array Array av MatrikkelenhetId objekter
      * @throws \SoapFault Hvis API-feil
      */

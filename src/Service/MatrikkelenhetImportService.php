@@ -12,6 +12,8 @@
 namespace Iaasen\Matrikkel\Service;
 
 use Iaasen\Matrikkel\Client\NedlastningClient;
+use Iaasen\Matrikkel\Client\MatrikkelenhetClient;
+use Iaasen\Matrikkel\Client\StoreClient;
 use Iaasen\Matrikkel\LocalDb\MatrikkelenhetTable;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -19,6 +21,8 @@ class MatrikkelenhetImportService
 {
     public function __construct(
         private NedlastningClient $nedlastningClient,
+        private MatrikkelenhetClient $matrikkelenhetClient,
+        private StoreClient $storeClient,
         private MatrikkelenhetTable $matrikkelenhetTable
     ) {}
     
@@ -201,6 +205,140 @@ class MatrikkelenhetImportService
         }
         
         return $totalCount;
+    }
+    
+    /**
+     * Import matrikkelenheter filtered by owner (organisasjonsnummer or personnummer)
+     * 
+     * This method:
+     * 1. Queries API to find matrikkelenheter owned by the specified person/org
+     * 2. Fetches complete matrikkelenhet objects via StoreClient
+     * 3. Saves them to database
+     * 
+     * @param SymfonyStyle $io Console I/O for progress reporting
+     * @param int $kommunenummer Kommune number (e.g. 4601 for Bergen)
+     * @param string $nummerForPerson Person number (11 digits) or organisation number (9 digits)
+     * @param int $batchSize Batch size for fetching complete objects (default 1000)
+     * @param int|null $limit Maximum total objects to import (null = all, for testing)
+     * @return int Number of matrikkelenheter imported
+     */
+    public function importMatrikkelenheterFiltered(
+        SymfonyStyle $io,
+        int $kommunenummer,
+        string $nummerForPerson,
+        int $batchSize = 1000,
+        ?int $limit = null
+    ): int {
+        $io->text("Importerer matrikkelenheter for kommune $kommunenummer med eierfilter...");
+        $io->text("  Eier (nummerForPerson): $nummerForPerson");
+        
+        // Step 1: Find matrikkelenheter owned by this person/org
+        $io->text("  → Søker etter matrikkelenheter...");
+        
+        try {
+            $matrikkelenhetIds = $this->matrikkelenhetClient->findMatrikkelenheterByNummerForPerson(
+                $kommunenummer,
+                $nummerForPerson
+            );
+            
+            $totalFound = count($matrikkelenhetIds);
+            $io->success("Fant $totalFound matrikkelenheter for eier $nummerForPerson i kommune $kommunenummer");
+            
+            if ($totalFound === 0) {
+                $io->note('Ingen matrikkelenheter funnet. Ingenting å importere.');
+                return 0;
+            }
+            
+            // Apply limit if specified
+            if ($limit !== null && $totalFound > $limit) {
+                $io->note("Limiting from $totalFound to $limit matrikkelenheter for testing");
+                $matrikkelenhetIds = array_slice($matrikkelenhetIds, 0, $limit);
+            }
+            
+            $toImportCount = count($matrikkelenhetIds);
+            $io->text("  → Skal importere $toImportCount matrikkelenheter");
+            $io->newLine();
+            
+            // Step 2: Fetch complete objects in batches
+            $totalImported = 0;
+            $batchNumber = 0;
+            
+            foreach (array_chunk($matrikkelenhetIds, $batchSize) as $batch) {
+                $batchNumber++;
+                $currentBatchSize = count($batch);
+                
+                $io->text("  → Batch $batchNumber: Henter $currentBatchSize matrikkelenheter...");
+                
+                try {
+                    // Fetch batch via StoreClient (efficient!)
+                    $matrikkelenhetObjects = $this->storeClient->getObjects($batch);
+                    
+                    $fetchedCount = 0;
+                    foreach ($matrikkelenhetObjects as $matrikkelenhetObject) {
+                        try {
+                            // Save to database
+                            $this->matrikkelenhetTable->insertRow($matrikkelenhetObject);
+                            $fetchedCount++;
+                            $totalImported++;
+                        } catch (\Exception $e) {
+                            $io->warning("Feil ved lagring av matrikkelenhet: " . $e->getMessage());
+                        }
+                    }
+                    
+                    $io->text("    → Lagret $fetchedCount av $currentBatchSize objekter (totalt: $totalImported)");
+                    
+                } catch (\Exception $e) {
+                    $io->warning("Feil ved henting av batch $batchNumber: " . $e->getMessage());
+                }
+            }
+            
+            // Flush remaining cached rows
+            $this->matrikkelenhetTable->flush();
+            
+            $io->newLine();
+            $io->success("Import fullført! Importerte $totalImported av $toImportCount matrikkelenheter");
+            
+            return $totalImported;
+            
+        } catch (\Exception $e) {
+            $io->error([
+                'Feil ved filtrert import:',
+                $e->getMessage(),
+            ]);
+            
+            if ($io->isVerbose()) {
+                $io->text($e->getTraceAsString());
+            }
+            
+            throw $e;
+        }
+    }
+    
+    /**
+     * Format MatrikkelenhetId object for display
+     */
+    private function formatMatrikkelenhetId($matrikkelenhetId): string
+    {
+        if (is_object($matrikkelenhetId)) {
+            $parts = [];
+            if (isset($matrikkelenhetId->kommunenummer)) {
+                $parts[] = "kommune=" . $matrikkelenhetId->kommunenummer;
+            }
+            if (isset($matrikkelenhetId->gardsnummer)) {
+                $parts[] = "gnr=" . $matrikkelenhetId->gardsnummer;
+            }
+            if (isset($matrikkelenhetId->bruksnummer)) {
+                $parts[] = "bnr=" . $matrikkelenhetId->bruksnummer;
+            }
+            if (isset($matrikkelenhetId->festenummer)) {
+                $parts[] = "fnr=" . $matrikkelenhetId->festenummer;
+            }
+            if (isset($matrikkelenhetId->seksjonsnummer)) {
+                $parts[] = "snr=" . $matrikkelenhetId->seksjonsnummer;
+            }
+            return implode(', ', $parts);
+        }
+        return (string) $matrikkelenhetId;
     }
     
     /**

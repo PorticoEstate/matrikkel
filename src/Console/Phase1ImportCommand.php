@@ -56,6 +56,20 @@ class Phase1ImportCommand extends Command
                 'Kommune number (4 digits, e.g. 4601 for Bergen)'
             )
             ->addOption(
+                'organisasjonsnummer',
+                'o',
+                InputOption::VALUE_OPTIONAL,
+                'Filter by organisation number (9 digits)',
+                null
+            )
+            ->addOption(
+                'personnummer',
+                'p',
+                InputOption::VALUE_OPTIONAL,
+                'Filter by person number (11 digits)',
+                null
+            )
+            ->addOption(
                 'batch-size',
                 'b',
                 InputOption::VALUE_OPTIONAL,
@@ -76,17 +90,31 @@ This command performs the foundational import that must run before Phase 2:
 
 <comment>Steps:</comment>
   1. Import kommune metadata
-  2. Bulk download all matrikkelenheter for kommune
+  2. Download matrikkelenheter for kommune (optionally filtered by owner)
   3. Extract person IDs from eierforhold
   4. Fetch and store person data (fysiske + juridiske personer)
   5. Store eierforhold (ownership) records
 
 <comment>Examples:</comment>
-  # Import base data for Bergen
+  # Import ALL base data for Bergen (full bulk download)
   php bin/console matrikkel:phase1-import --kommune=4601
+
+  # Import ONLY matrikkelenheter owned by specific organization
+  php bin/console matrikkel:phase1-import --kommune=4601 --organisasjonsnummer=964338531
+
+  # Import ONLY matrikkelenheter owned by specific person
+  php bin/console matrikkel:phase1-import --kommune=4601 --personnummer=12345678901
 
   # Import with maximum batch size (fastest)
   php bin/console matrikkel:phase1-import --kommune=4601 --batch-size=5000
+
+<comment>Filtering:</comment>
+  When --organisasjonsnummer or --personnummer is provided, Phase 1 will:
+  1. Query the API to find matrikkelenheter owned by that person/org
+  2. Fetch only those matrikkelenheter (targeted import)
+  3. Import personer and eierforhold for those matrikkelenheter
+  
+  Without filters, Phase 1 does a full bulk download of all matrikkelenheter.
 
 <comment>After Phase 1:</comment>
   Run Phase 2 to import filtered data (bygninger, bruksenheter, adresser):
@@ -101,6 +129,8 @@ HELP
         $io = new SymfonyStyle($input, $output);
         
         $kommune = $input->getOption('kommune');
+        $organisasjonsnummer = $input->getOption('organisasjonsnummer');
+        $personnummer = $input->getOption('personnummer');
         $batchSize = (int)$input->getOption('batch-size');
         $limit = $input->getOption('limit') ? (int)$input->getOption('limit') : null;
         
@@ -109,11 +139,39 @@ HELP
             return Command::FAILURE;
         }
         
+        // Validate that only one filter is provided
+        if ($organisasjonsnummer && $personnummer) {
+            $io->error('Cannot specify both --organisasjonsnummer and --personnummer. Choose one.');
+            return Command::FAILURE;
+        }
+        
         $kommunenummer = (int)$kommune;
+        
+        // Determine import mode
+        $importMode = 'bulk';  // Default: bulk download all matrikkelenheter
+        $filterValue = null;
+        
+        if ($organisasjonsnummer) {
+            $importMode = 'filtered';
+            $filterValue = $organisasjonsnummer;
+            $filterType = 'organisasjonsnummer';
+        } elseif ($personnummer) {
+            $importMode = 'filtered';
+            $filterValue = $personnummer;
+            $filterType = 'personnummer';
+        }
         
         $io->title('Phase 1: Base Import');
         $io->text([
             'Kommune: ' . $kommunenummer,
+            'Import mode: ' . $importMode,
+        ]);
+        
+        if ($importMode === 'filtered') {
+            $io->text('Filter: ' . $filterType . ' = ' . $filterValue);
+        }
+        
+        $io->text([
             'Batch size: ' . $batchSize,
             'Limit: ' . ($limit ? $limit : 'none (all)'),
         ]);
@@ -129,14 +187,28 @@ HELP
             $io->text("Kommune $kommunenummer should exist in database");
             $io->success('Kommune check complete');
             
-            // Step 2: Import matrikkelenheter (bulk download)
-            $io->section('Step 2/4: Importing matrikkelenheter (bulk download)');
-            $matrikkelenhetCount = $this->matrikkelenhetImportService->importMatrikkelenheterForKommune(
-                $io,
-                $kommunenummer,
-                $batchSize,
-                $limit
-            );
+            // Step 2: Import matrikkelenheter
+            $io->section('Step 2/4: Importing matrikkelenheter');
+            
+            if ($importMode === 'filtered') {
+                $io->text("Using FILTERED import (owner: $filterValue)");
+                $matrikkelenhetCount = $this->matrikkelenhetImportService->importMatrikkelenheterFiltered(
+                    $io,
+                    $kommunenummer,
+                    $filterValue,
+                    $batchSize,
+                    $limit
+                );
+            } else {
+                $io->text("Using BULK import (all matrikkelenheter for kommune)");
+                $matrikkelenhetCount = $this->matrikkelenhetImportService->importMatrikkelenheterForKommune(
+                    $io,
+                    $kommunenummer,
+                    $batchSize,
+                    $limit
+                );
+            }
+            
             $io->success("Imported $matrikkelenhetCount matrikkelenheter");
             
             // Step 3: Import personer (from eierforhold)
