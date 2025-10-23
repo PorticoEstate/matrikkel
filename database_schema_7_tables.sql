@@ -1,4 +1,18 @@
 -- ================================================================
+-- DEPRECATED: Database Schema Documentation
+-- ================================================================
+-- ⚠️  This file is DEPRECATED and kept for reference only!
+-- 
+-- USE INSTEAD: migrations/V1__baseline_schema.sql
+-- 
+-- The official database schema is maintained in Flyway migrations:
+--   /opt/matrikkel/migrations/V1__baseline_schema.sql
+-- 
+-- This file was an early design document and may not reflect
+-- the actual implemented schema. Refer to V1__baseline_schema.sql
+-- for the correct, up-to-date schema.
+-- ================================================================
+-- Original header:
 -- Database Schema for 7 Primary Tables - Matrikkel System
 -- Created: 2025-10-07
 -- Purpose: Support filtered data retrieval by kommune and tinglyst eier
