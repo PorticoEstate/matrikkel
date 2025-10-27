@@ -148,7 +148,13 @@ class BygningImportService
         
         // Areal
         $bebygd_areal = isset($bygning->bebygdAreal) ? (float) $bygning->bebygdAreal : null;
-        $bruksareal = isset($bygning->bruksarealTotalt) ? (float) $bygning->bruksarealTotalt : null;
+        
+        // bruksarealTotalt is in etasjedata object, not on top level
+        $bruksareal = null;
+        if (isset($bygning->etasjedata) && isset($bygning->etasjedata->bruksarealTotalt)) {
+            $bruksareal = (float) $bygning->etasjedata->bruksarealTotalt;
+        }
+        
         $uten_bebygd_areal = isset($bygning->utenBebygdAreal) && $bygning->utenBebygdAreal ? true : false;
         $ufullstendig_areal = isset($bygning->ufullstendigAreal) && $bygning->ufullstendigAreal ? true : false;
         
@@ -229,11 +235,17 @@ class BygningImportService
         
         if (isset($bygning->representasjonspunkt)) {
             $punkt = $bygning->representasjonspunkt;
-            $representasjonspunkt_x = isset($punkt->ost) ? (float) $punkt->ost : null;
-            $representasjonspunkt_y = isset($punkt->nord) ? (float) $punkt->nord : null;
-            $representasjonspunkt_z = isset($punkt->hoyde) ? (float) $punkt->hoyde : null;
-            if (isset($punkt->koordsys)) {
-                $koordinatsystem = 'EPSG:' . $punkt->koordsys;
+            
+            // Coordinates are in position object
+            if (isset($punkt->position)) {
+                $representasjonspunkt_x = isset($punkt->position->x) ? (float) $punkt->position->x : null;
+                $representasjonspunkt_y = isset($punkt->position->y) ? (float) $punkt->position->y : null;
+                $representasjonspunkt_z = isset($punkt->position->z) ? (float) $punkt->position->z : null;
+            }
+            
+            // Coordinate system is in koordinatsystemKodeId
+            if (isset($punkt->koordinatsystemKodeId) && isset($punkt->koordinatsystemKodeId->value)) {
+                $koordinatsystem = 'EPSG:' . $punkt->koordinatsystemKodeId->value;
             }
         }
 
