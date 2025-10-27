@@ -26,6 +26,7 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+            - '../src/Client/MatrikkelTypes.php'
 
 #    Iaasen\Matrikkel\Service\SoapClient:
 #        factory: [ 'Iaasen\Matrikkel\Service\SoapClientFactory', 'create' ]
@@ -77,6 +78,55 @@ services:
                 port: '%env(int:DB_PORT)%'
                 username: '%env(DB_USERNAME)%'
                 password: '%env(DB_PASSWORD)%'
+
+    # Repository Services for PostgreSQL Database Access
+    Iaasen\Matrikkel\LocalDb\AdresseRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
+
+    Iaasen\Matrikkel\LocalDb\MatrikkelenhetRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
+
+    Iaasen\Matrikkel\LocalDb\BygningRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
+
+    Iaasen\Matrikkel\LocalDb\BruksenhetRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
+
+    Iaasen\Matrikkel\LocalDb\KommuneRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
+
+    Iaasen\Matrikkel\LocalDb\PersonRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
 
     # PDO service for direct database access
     PDO:

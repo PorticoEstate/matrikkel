@@ -96,41 +96,33 @@ php bin/console matrikkel:ping
 
 ### Available Console Commands
 
-Test your API connection:
+**Test API connection:**
 
 ```bash
 php bin/console matrikkel:ping
 ```
 
-Search for addresses:
+**Import data (two-phase approach):**
 
 ```bash
-php bin/console matrikkel:adresse
+# Phase 1: Import base data (kommune, matrikkelenheter, personer, eierforhold)
+php bin/console matrikkel:phase1-import --kommune=4601 --limit=100 --organisasjonsnummer=964338531
+
+# Phase 2: Import filtered data (veger, bygninger, bruksenheter, adresser)
+php bin/console matrikkel:phase2-import --kommune=4601 --organisasjonsnummer=964338531
 ```
 
-Get property units (bruksenheter):
+**Debug commands:**
 
 ```bash
-php bin/console matrikkel:bruksenhet
+# Debug matrikkelenhet structure from API
+php bin/console matrikkel:debug-matrikkelenhet
+
+# Test NedlastningClient bulk downloads
+php bin/console matrikkel:test-nedlastning
 ```
 
-Get municipality data:
-
-```bash
-php bin/console matrikkel:kommune
-```
-
-Get code lists:
-
-```bash
-php bin/console matrikkel:kodeliste
-```
-
-Search the cadastre:
-
-```bash
-php bin/console matrikkel:sok
-```
+**Note**: For searching individual addresses, property units, cadastral units, municipalities, or code lists, use the REST API endpoints below instead of console commands.
 
 ### REST API Endpoints
 
@@ -230,104 +222,24 @@ docker compose build --no-cache
 
 ## 💾 Local Database Import
 
-As an alternative to the SOAP API, you can import address data to a local SQLite database for faster queries.
+The Phase 1 and Phase 2 import commands handle all database imports for kommune, matrikkelenheter, personer, eierforhold, veger, bygninger, bruksenheter, and adresser.
 
-### Import Addresses to Local Database
-
-```bash
-# Import all Norwegian addresses (approx. 2.5 million records)
-php bin/console matrikkel:adresse-import
-
-# With Docker
-docker compose exec app php bin/console matrikkel:adresse-import
-```
-
-**Note**: This import should be run at regular intervals to keep data current.
-
-### Database Setup for PostgreSQL
-
-If you prefer to use PostgreSQL instead of SQLite, you'll need to create the following tables manually:
-
-```sql
-BEGIN;
-
-CREATE TABLE matrikkel_adresser (
-  adresse_id BIGINT NOT NULL,
-  fylkesnummer SMALLINT NOT NULL,
-  kommunenummer SMALLINT NOT NULL,
-  kommunenavn VARCHAR(255) NOT NULL,
-  adressetype VARCHAR(255) NOT NULL,
-  adressekode INTEGER NOT NULL,
-  adressenavn VARCHAR(255) NOT NULL,
-  nummer SMALLINT NOT NULL,
-  bokstav VARCHAR(2) NOT NULL,
-  gardsnummer SMALLINT NOT NULL,
-  bruksnummer SMALLINT NOT NULL,
-  festenummer SMALLINT,
-  seksjonsnummer SMALLINT,
-  undernummer SMALLINT,
-  adresse_tekst VARCHAR(255) NOT NULL,
-  epsg SMALLINT NOT NULL,
-  nord FLOAT NOT NULL,
-  ost FLOAT NOT NULL,
-  postnummer SMALLINT NOT NULL,
-  poststed VARCHAR(255) NOT NULL,
-  grunnkretsnavn VARCHAR(255) NOT NULL,
-  soknenavn VARCHAR(255) NOT NULL,
-  tettstednavn VARCHAR(255) NOT NULL,
-  search_context VARCHAR(512) DEFAULT '',
-  timestamp_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-ALTER TABLE matrikkel_adresser
-  ADD CONSTRAINT pk_matrikkel_adresser PRIMARY KEY (adresse_id);
-
-CREATE INDEX idx_matrikkel_adresser_fylkesnummer ON matrikkel_adresser (fylkesnummer);
-CREATE INDEX idx_matrikkel_adresser_adressenavn ON matrikkel_adresser (adressenavn);
-CREATE INDEX idx_matrikkel_adresser_postnummer ON matrikkel_adresser (postnummer);
-CREATE INDEX idx_matrikkel_adresser_search_context ON matrikkel_adresser (search_context);
-
-CREATE TABLE matrikkel_bruksenheter (
-  adresse_id BIGINT NOT NULL,
-  bruksenhet VARCHAR(5) NOT NULL,
-  timestamp_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-ALTER TABLE matrikkel_bruksenheter
-  ADD CONSTRAINT pk_matrikkel_bruksenheter PRIMARY KEY (adresse_id, bruksenhet);
-
-ALTER TABLE matrikkel_bruksenheter
-  ADD CONSTRAINT fk_matrikkel_bruksenheter_adresse
-  FOREIGN KEY (adresse_id) REFERENCES matrikkel_adresser (adresse_id);
-
-COMMIT;
-```
-
-### Data Source
-
-The address data is downloaded from Kartverket's official source. The URL for downloading addresses is stored in `AddressImportService::ADDRESS_URL`.
+See the "Available Console Commands" section above for usage examples.
 
 ### Database Schema
 
-The project supports both SQLite (default) and PostgreSQL databases. The following tables are created automatically for SQLite, or can be created manually for PostgreSQL:
+The project uses PostgreSQL to store imported data. The complete schema includes 7 primary tables:
 
-#### `matrikkel_adresser` Table
+- **`matrikkel_kommuner`** - Norwegian municipalities
+- **`matrikkel_matrikkelenheter`** - Cadastral units (properties)
+- **`matrikkel_personer`** - Property owners (physical and legal persons)
+- **`matrikkel_eierforhold`** - Ownership records (junction table)
+- **`matrikkel_veger`** - Roads/streets
+- **`matrikkel_bygninger`** - Buildings with detailed property data
+- **`matrikkel_bruksenheter`** - Property units (apartments, etc.)
+- **`matrikkel_adresser`** - Addresses
 
-Stores complete address information including:
-- **Administrative data**: County (fylke), municipality (kommune), address codes
-- **Physical address**: Street name, house number, letter designation
-- **Property information**: Garden number, use number, section numbers
-- **Geographic data**: Coordinates (north/east), coordinate system (EPSG)
-- **Postal information**: Postal code and place name
-- **Administrative divisions**: District names, parish names, urban areas
-- **Search context**: Searchable text field for full-text searches
-
-#### `matrikkel_bruksenheter` Table
-
-Stores property unit information linked to addresses:
-- **Address ID**: Reference to the main address table
-- **Unit identifier**: Apartment/unit number or designation
-- **Timestamps**: Creation and modification tracking
+For the complete database schema, see `migrations/V1__baseline_schema.sql`.
 
 ## 🔗 API Reference
 
