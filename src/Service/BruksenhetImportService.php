@@ -210,8 +210,22 @@ class BruksenhetImportService
             // Extract other fields
             $lopenummer = $bruksenhet->lopenummer ?? null;
             $uuid = isset($bruksenhet->uuid) ? $bruksenhet->uuid->uuid : null;
-            $bruksenhettype = isset($bruksenhet->bruksenhetType) ? $bruksenhet->bruksenhetType : null;
-            $etasjeplan = isset($bruksenhet->etasjeplan) ? $bruksenhet->etasjeplan : null;
+            
+            // Extract kode IDs - these are MatrikkelBubbleId objects with ->value property
+            // Note: 0 can be a valid value (means "not specified"), so we include it
+            $bruksenhetstypeKodeId = isset($bruksenhet->bruksenhetstypeKodeId) && isset($bruksenhet->bruksenhetstypeKodeId->value)
+                ? $bruksenhet->bruksenhetstypeKodeId->value 
+                : null;
+            $etasjeplanKodeId = isset($bruksenhet->etasjeplanKodeId) && isset($bruksenhet->etasjeplanKodeId->value)
+                ? $bruksenhet->etasjeplanKodeId->value 
+                : null;
+            $kjokkentilgangKodeId = isset($bruksenhet->kjokkentilgangId) && isset($bruksenhet->kjokkentilgangId->value)
+                ? $bruksenhet->kjokkentilgangId->value 
+                : null;
+            $kostraFunksjonKodeId = isset($bruksenhet->kostraFunksjonKodeId) && isset($bruksenhet->kostraFunksjonKodeId->value)
+                ? $bruksenhet->kostraFunksjonKodeId->value 
+                : null;
+            
             $etasjenummer = $bruksenhet->etasjenummer ?? null;
             $adresseId = isset($bruksenhet->adresseId) ? $bruksenhet->adresseId->value : null;
             $antallRom = $bruksenhet->antallRom ?? null;
@@ -228,6 +242,8 @@ class BruksenhetImportService
                     uuid,
                     bruksenhettype_kode_id,
                     etasjeplan_kode_id,
+                    kjokkentilgang_kode_id,
+                    kostra_funksjon_kode_id,
                     etasjenummer,
                     adresse_id,
                     antall_rom,
@@ -237,13 +253,15 @@ class BruksenhetImportService
                     sist_lastet_ned,
                     opprettet,
                     oppdatert
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (bruksenhet_id) DO UPDATE SET
                     matrikkelenhet_id = EXCLUDED.matrikkelenhet_id,
                     lopenummer = EXCLUDED.lopenummer,
                     uuid = EXCLUDED.uuid,
                     bruksenhettype_kode_id = EXCLUDED.bruksenhettype_kode_id,
                     etasjeplan_kode_id = EXCLUDED.etasjeplan_kode_id,
+                    kjokkentilgang_kode_id = EXCLUDED.kjokkentilgang_kode_id,
+                    kostra_funksjon_kode_id = EXCLUDED.kostra_funksjon_kode_id,
                     etasjenummer = EXCLUDED.etasjenummer,
                     adresse_id = EXCLUDED.adresse_id,
                     antall_rom = EXCLUDED.antall_rom,
@@ -259,8 +277,10 @@ class BruksenhetImportService
                 $matrikkelenhetId,
                 $lopenummer,
                 $uuid,
-                $bruksenhettype,
-                $etasjeplan,
+                $bruksenhetstypeKodeId,
+                $etasjeplanKodeId,
+                $kjokkentilgangKodeId,
+                $kostraFunksjonKodeId,
                 $etasjenummer,
                 $adresseId,
                 $antallRom,
