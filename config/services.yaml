@@ -72,9 +72,9 @@ services:
     Laminas\Db\Adapter\Adapter:
         arguments:
             -   driver: 'Pdo_Pgsql'
-                database: 'matrikkel'
-                hostname: '10.0.2.15'
-                port: 5435
+                database: '%env(DB_NAME)%'
+                hostname: '%env(DB_HOST)%'
+                port: '%env(int:DB_PORT)%'
                 username: '%env(DB_USERNAME)%'
                 password: '%env(DB_PASSWORD)%'
 
