@@ -102,14 +102,30 @@ php bin/console matrikkel:ping
 php bin/console matrikkel:ping
 ```
 
-**Import data (two-phase approach):**
+**Import data:**
+
+```bash
+# Complete import (both phases combined)
+php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442
+
+# With limit for testing
+php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442 --limit=10
+
+# Skip Phase 1 (only import buildings and addresses)
+php bin/console matrikkel:import --kommune=4627 --skip-phase1
+
+# Skip Phase 2 (only import properties and owners)
+php bin/console matrikkel:import --kommune=4627 --skip-phase2
+```
+
+**Alternative: Two-phase approach (if needed):**
 
 ```bash
 # Phase 1: Import base data (kommune, matrikkelenheter, personer, eierforhold)
-php bin/console matrikkel:phase1-import --kommune=4601 --limit=100 --organisasjonsnummer=964338531
+php bin/console matrikkel:phase1-import --kommune=4627 --organisasjonsnummer=964338442
 
-# Phase 2: Import filtered data (veger, bygninger, bruksenheter, adresser)
-php bin/console matrikkel:phase2-import --kommune=4601 --organisasjonsnummer=964338531
+# Phase 2: Import building data (veger, bygninger, bruksenheter, adresser)
+php bin/console matrikkel:phase2-import --kommune=4627 --organisasjonsnummer=964338442
 ```
 
 **Debug commands:**
@@ -222,9 +238,77 @@ docker compose build --no-cache
 
 ## 💾 Local Database Import
 
-The Phase 1 and Phase 2 import commands handle all database imports for kommune, matrikkelenheter, personer, eierforhold, veger, bygninger, bruksenheter, and adresser.
+### Import Commands
 
-See the "Available Console Commands" section above for usage examples.
+The project provides a unified import command that handles all data import in two phases:
+
+**Phase 1** (Base Data):
+- Kommune (municipality)
+- Matrikkelenheter (cadastral units/properties)
+- Personer (owners - physical and legal persons)
+- Eierforhold (ownership relations)
+
+**Phase 2** (Building Data):
+- Veger (roads/streets)
+- Bruksenheter (property units)
+- Bygninger (buildings)
+- Adresser (addresses)
+
+**Basic Usage**:
+
+```bash
+# Full import for a municipality with owner filter
+php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442
+
+# Test with limited data
+php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442 --limit=10
+
+# Import only Phase 1 (base data)
+php bin/console matrikkel:import --kommune=4627 --skip-phase2
+
+# Import only Phase 2 (building data)
+php bin/console matrikkel:import --kommune=4627 --skip-phase1
+```
+
+**Available Options**:
+
+- `--kommune=XXXX` - Required: 4-digit municipality number
+- `--organisasjonsnummer=XXXXXX` - Filter by organization number (owner)
+- `--limit=N` - Limit number of matrikkelenheter to import (for testing)
+- `--skip-phase1` - Skip Phase 1, only run Phase 2
+- `--skip-phase2` - Skip Phase 2, only run Phase 1
+
+**Example: Full Import for Askøy Kommune**:
+
+```bash
+php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442
+```
+
+This will import:
+- 1 kommune
+- 693 matrikkelenheter
+- 442 personer
+- 329 veger
+- 879 bruksenheter
+- 692 bygninger
+- 263 adresser
+
+**Performance**:
+- Phase 1: ~12 seconds (base data)
+- Phase 2: ~23 seconds (building data)
+- Total: ~35 seconds for complete dataset
+
+### Legacy Commands
+
+The individual phase commands are still available if you need more control:
+
+```bash
+# Run Phase 1 only
+php bin/console matrikkel:phase1-import --kommune=4627 --organisasjonsnummer=964338442
+
+# Run Phase 2 only
+php bin/console matrikkel:phase2-import --kommune=4627 --organisasjonsnummer=964338442
+```
 
 ### Database Schema
 

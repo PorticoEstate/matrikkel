@@ -80,6 +80,13 @@ class AdresseId extends MatrikkelBubbleId
 }
 
 /**
+ * KommuneId - specific type for Kommune objects
+ */
+class KommuneId extends MatrikkelBubbleId
+{
+}
+
+/**
  * PersonIdent - Base class for person identification
  */
 class PersonIdent

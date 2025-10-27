@@ -201,6 +201,24 @@ class KommuneTable extends AbstractTable
     }
     
     /**
+     * Sjekk om en kommune finnes i databasen
+     * 
+     * @param int $kommunenummer Kommunenummer (f.eks. 4601)
+     * @return bool True hvis kommunen finnes
+     */
+    public function kommuneExists(int $kommunenummer): bool
+    {
+        $sql = "SELECT COUNT(*) as count FROM {$this->tableName} WHERE kommunenummer = ?";
+        $statement = $this->dbAdapter->query($sql);
+        $result = $statement->execute([$kommunenummer]);
+        
+        foreach ($result as $row) {
+            return (int) $row['count'] > 0;
+        }
+        return false;
+    }
+    
+    /**
      * Tell antall kommuner i databasen
      * 
      * @return int Antall kommuner

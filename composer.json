@@ -12,7 +12,6 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-zip": "*",
-        "iaasen/stdlib": "^1",
         "laminas/laminas-db": "*",
         "laminas/laminas-servicemanager": "*",
         "laminas/laminas-soap": "*",

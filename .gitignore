@@ -9,6 +9,11 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
+
+###> cache ###
+/data/cache/
+###< cache ###
+
 .idea
 src/Wsdl/
 config/soap-client.php

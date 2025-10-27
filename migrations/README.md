@@ -53,7 +53,4 @@ docker-compose exec db psql -U bergenaktiva -d test -f /migrations/V1__baseline_
 
 ## Schema Documentation
 
-For legacy schema documentation (deprecated), see:
-- `/opt/matrikkel/database_schema_7_tables.sql` (reference only - not accurate)
-
-**Always refer to V1__baseline_schema.sql for the correct schema!**
+**Always refer to V1__baseline_schema.sql for the current schema!**

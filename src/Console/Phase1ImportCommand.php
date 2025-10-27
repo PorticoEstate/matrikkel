@@ -182,9 +182,23 @@ HELP
         try {
             // Step 1: Ensure kommune exists
             $io->section('Step 1/4: Ensuring kommune exists in database');
-            // TODO: Check if kommune exists, if not fetch from API
-            // For now, assume kommune is already in database (manual INSERT or previous import)
-            $io->text("Kommune $kommunenummer should exist in database");
+            
+            $kommuneExists = $this->kommuneImportService->kommuneExists($kommunenummer);
+            
+            if (!$kommuneExists) {
+                $io->text("Kommune $kommunenummer not found in database - fetching from Matrikkel API");
+                $success = $this->kommuneImportService->importKommune($io, $kommunenummer);
+                
+                if (!$success) {
+                    $io->error("Failed to fetch kommune $kommunenummer from Matrikkel API");
+                    return Command::FAILURE;
+                }
+                
+                $io->text("✓ Kommune $kommunenummer imported successfully");
+            } else {
+                $io->text("✓ Kommune $kommunenummer already exists in database");
+            }
+            
             $io->success('Kommune check complete');
             
             // Step 2: Import matrikkelenheter

@@ -12,6 +12,7 @@
 namespace Iaasen\Matrikkel\Service;
 
 use Iaasen\Matrikkel\Client\NedlastningClient;
+use Iaasen\Matrikkel\Client\KommuneClient;
 use Iaasen\Matrikkel\LocalDb\KommuneTable;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -19,6 +20,7 @@ class KommuneImportService
 {
     public function __construct(
         private NedlastningClient $nedlastningClient,
+        private KommuneClient $kommuneClient,
         private KommuneTable $kommuneTable
     ) {}
     
@@ -123,6 +125,91 @@ class KommuneImportService
     public function countKommuner(): int
     {
         return $this->kommuneTable->countKommuner();
+    }
+    
+    /**
+     * Sjekk om en kommune finnes i databasen
+     * 
+     * @param int $kommunenummer Kommunenummer (4 siffer, f.eks. 4601)
+     * @return bool True hvis kommunen finnes
+     */
+    public function kommuneExists(int $kommunenummer): bool
+    {
+        return $this->kommuneTable->kommuneExists($kommunenummer);
+    }
+    
+    /**
+     * Importer en spesifikk kommune fra Matrikkel API
+     * 
+     * Bruker NedlastningClient for å hente kommuner, deretter filter lokalt.
+     * Filter-syntaks i API er ukjent, så vi henter alle og filtrerer lokalt.
+     * 
+     * @param SymfonyStyle $io Console IO for output
+     * @param int $kommunenummer Kommunenummer (4 siffer, f.eks. 4627)
+     * @return bool True hvis import var vellykket
+     */
+    public function importKommune(SymfonyStyle $io, int $kommunenummer): bool
+    {
+        try {
+            $io->text("Henter kommune $kommunenummer fra Matrikkel API...");
+            
+            // Use NedlastningClient to fetch Kommune objects
+            // Filter syntax unknown - fetch without filter and search locally
+            $kommuner = $this->nedlastningClient->findObjekterEtterId(
+                0,                  // Start from beginning
+                'Kommune',          // Domain class
+                null,               // No filter - fetch all
+                1000                // Max batch size
+            );
+            
+            if (empty($kommuner)) {
+                $io->warning("Ingen kommuner funnet i Matrikkel API");
+                return false;
+            }
+            
+            $io->text("API returnerte " . count($kommuner) . " kommuner, søker etter $kommunenummer...");
+            
+            // Find the specific kommune we need
+            $targetKommune = null;
+            foreach ($kommuner as $kommune) {
+                $knr = isset($kommune->kommunenummer) ? (int)$kommune->kommunenummer : 0;
+                if ($knr === $kommunenummer) {
+                    $targetKommune = $kommune;
+                    break;
+                }
+            }
+            
+            if (!$targetKommune) {
+                $io->warning("Kommune $kommunenummer ikke funnet blant de " . count($kommuner) . " kommunene");
+                return false;
+            }
+            
+            $kommunenavn = $targetKommune->kommunenavn ?? 'Ukjent';
+            $io->text("Fant kommune: $kommunenavn");
+            $io->text("Lagrer til database...");
+            
+            // Save to database using KommuneTable
+            $this->kommuneTable->insertRow($targetKommune);
+            $this->kommuneTable->flush();
+            
+            $io->success("✓ Kommune $kommunenummer ($kommunenavn) importert");
+            return true;
+            
+        } catch (\SoapFault $e) {
+            $io->error([
+                'SOAP-feil ved import av kommune:',
+                'Melding: ' . $e->getMessage(),
+                'Detaljer: ' . ($e->faultstring ?? ''),
+            ]);
+            return false;
+        } catch (\Exception $e) {
+            $io->error([
+                'Feil ved import av kommune:',
+                'Melding: ' . $e->getMessage(),
+                'Trace: ' . $e->getTraceAsString(),
+            ]);
+            return false;
+        }
     }
     
     /**
