@@ -137,9 +137,14 @@ class BygningImportService
             }
         }
         
-        // TODO: Code lookups - for now storing NULL for code IDs
-        $bygningstype_kode_id = null;
-        $bygningsstatus_kode_id = null;
+        // Extract kode IDs - these are MatrikkelBubbleId objects with ->value property
+        // Note: 0 can be a valid value (means "not specified"), so we include it
+        $bygningstype_kode_id = isset($bygning->bygningstypeKodeId) && isset($bygning->bygningstypeKodeId->value)
+            ? $bygning->bygningstypeKodeId->value
+            : null;
+        $bygningsstatus_kode_id = isset($bygning->bygningsstatusKodeId) && isset($bygning->bygningsstatusKodeId->value)
+            ? $bygning->bygningsstatusKodeId->value
+            : null;
         
         // Areal
         $bebygd_areal = isset($bygning->bebygdAreal) ? (float) $bygning->bebygdAreal : null;
@@ -148,8 +153,33 @@ class BygningImportService
         $ufullstendig_areal = isset($bygning->ufullstendigAreal) && $bygning->ufullstendigAreal ? true : false;
         
         // Year and counts
-        $byggeaar = isset($bygning->byggeaar) ? (int) $bygning->byggeaar : null;
-        $antall_etasjer = isset($bygning->etasjerAntall) ? (int) $bygning->etasjerAntall : null;
+        // byggeaar: Extract year from "Tatt i bruk" status in bygningsstatusHistorikker
+        // Status code 4 = "Tatt i bruk" (taken into use)
+        $byggeaar = null;
+        if (isset($bygning->bygningsstatusHistorikker) && isset($bygning->bygningsstatusHistorikker->item)) {
+            $statusItems = is_array($bygning->bygningsstatusHistorikker->item) 
+                ? $bygning->bygningsstatusHistorikker->item 
+                : [$bygning->bygningsstatusHistorikker->item];
+            
+            // Look for "Tatt i bruk" status (code 4)
+            foreach ($statusItems as $statusItem) {
+                if (isset($statusItem->bygningsstatusKodeId) 
+                    && $statusItem->bygningsstatusKodeId->value == 4
+                    && isset($statusItem->registrertDato)
+                    && isset($statusItem->registrertDato->timestamp)) {
+                    // Extract year from timestamp like "2010-09-23T13:29:45.000000000+02:00"
+                    $timestamp = $statusItem->registrertDato->timestamp;
+                    $byggeaar = (int) substr($timestamp, 0, 4);
+                    break; // Use first "Tatt i bruk" status found
+                }
+            }
+        }
+        
+        // antallEtasjer is in kommunalTilleggsdel according to WSDL (kommunetillegg.xsd line 154)
+        $antall_etasjer = null;
+        if (isset($bygning->kommunalTilleggsdel) && isset($bygning->kommunalTilleggsdel->antallEtasjer)) {
+            $antall_etasjer = (int) $bygning->kommunalTilleggsdel->antallEtasjer;
+        }
         
         // Boolean flags
         $har_heis = isset($bygning->harHeis) && $bygning->harHeis ? true : false;
@@ -158,13 +188,38 @@ class BygningImportService
         $skjermingsverdig = isset($bygning->skjermingsverdig) && $bygning->skjermingsverdig ? true : false;
         $nymatrikulert = isset($bygning->nymatrikulert) && $bygning->nymatrikulert ? true : false;
         
-        // TODO: Code IDs for avlop, vannforsyning, oppvarming, energikilde, naringsgruppe, opprinnelse
-        $avlops_kode_id = null;
-        $vannforsynings_kode_id = null;
-        $oppvarmings_kode_ids = null; // PostgreSQL array
-        $energikilde_kode_ids = null; // PostgreSQL array
-        $naringsgruppe_kode_id = null;
-        $opprinnelses_kode_id = null;
+        // Extract more kode IDs
+        $avlops_kode_id = isset($bygning->avlopsKodeId) && isset($bygning->avlopsKodeId->value)
+            ? $bygning->avlopsKodeId->value
+            : null;
+        $vannforsynings_kode_id = isset($bygning->vannforsyningsKodeId) && isset($bygning->vannforsyningsKodeId->value)
+            ? $bygning->vannforsyningsKodeId->value
+            : null;
+        $naringsgruppe_kode_id = isset($bygning->naringsgruppeKodeId) && isset($bygning->naringsgruppeKodeId->value)
+            ? $bygning->naringsgruppeKodeId->value
+            : null;
+        $opprinnelses_kode_id = isset($bygning->opprinnelsesKodeId) && isset($bygning->opprinnelsesKodeId->value)
+            ? $bygning->opprinnelsesKodeId->value
+            : null;
+        
+        // Arrays of kode IDs - convert to PostgreSQL array format
+        $oppvarmings_kode_ids = null;
+        if (isset($bygning->oppvarmingsKodeIds) && isset($bygning->oppvarmingsKodeIds->item)) {
+            $items = is_array($bygning->oppvarmingsKodeIds->item) 
+                ? $bygning->oppvarmingsKodeIds->item 
+                : [$bygning->oppvarmingsKodeIds->item];
+            $values = array_map(fn($item) => $item->value, $items);
+            $oppvarmings_kode_ids = '{' . implode(',', $values) . '}';
+        }
+        
+        $energikilde_kode_ids = null;
+        if (isset($bygning->energikildeKodeIds) && isset($bygning->energikildeKodeIds->item)) {
+            $items = is_array($bygning->energikildeKodeIds->item) 
+                ? $bygning->energikildeKodeIds->item 
+                : [$bygning->energikildeKodeIds->item];
+            $values = array_map(fn($item) => $item->value, $items);
+            $energikilde_kode_ids = '{' . implode(',', $values) . '}';
+        }
         
         // Representasjonspunkt (coordinates)
         $representasjonspunkt_x = null;
