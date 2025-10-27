@@ -199,18 +199,70 @@ class PersonImportService
             ? $fodselsnummer 
             : null;
         
+        // Extract postadresse (MottakerAdresse structure)
+        // Note: API often returns data in adresselinje2+3, not starting from adresselinje1
+        // We normalize by shifting up if adresselinje1 is empty
+        $postadresse_adresselinje1 = null;
+        $postadresse_adresselinje2 = null;
+        $postadresse_adresselinje3 = null;
+        $postadresse_postnummer = null;
+        $postadresse_poststed = null;
+        $postadresse_land_kode = null;
+        
+        if (isset($person->postadresse)) {
+            $pa = $person->postadresse;
+            $adresselinje1 = $pa->adresselinje1 ?? null;
+            $adresselinje2 = $pa->adresselinje2 ?? null;
+            $adresselinje3 = $pa->adresselinje3 ?? null;
+            
+            // Normalize: If adresselinje1 is empty, shift lines up
+            if (empty($adresselinje1) && !empty($adresselinje2)) {
+                $postadresse_adresselinje1 = $adresselinje2;
+                $postadresse_adresselinje2 = $adresselinje3;
+                $postadresse_adresselinje3 = null;
+            } else {
+                $postadresse_adresselinje1 = $adresselinje1;
+                $postadresse_adresselinje2 = $adresselinje2;
+                $postadresse_adresselinje3 = $adresselinje3;
+            }
+            
+            // Parse postnummer and poststed from the line with postnummer (after normalization)
+            // Check adresselinje2 first (most common after normalization), then adresselinje3
+            if ($postadresse_adresselinje2 && preg_match('/^(\d{4})\s+(.+)$/', $postadresse_adresselinje2, $matches)) {
+                $postadresse_postnummer = $matches[1];
+                $postadresse_poststed = $matches[2];
+            } elseif ($postadresse_adresselinje3 && preg_match('/^(\d{4})\s+(.+)$/', $postadresse_adresselinje3, $matches)) {
+                $postadresse_postnummer = $matches[1];
+                $postadresse_poststed = $matches[2];
+            }
+            
+            // landKodeId is a LandKodeId object with value property
+            if (isset($pa->landKodeId) && isset($pa->landKodeId->value)) {
+                $postadresse_land_kode = $pa->landKodeId->value;
+            }
+        }
+        
         // FIRST: Always insert into matrikkel_personer (parent table)
         // Schema columns: id, matrikkel_person_id, uuid, nummer, navn, postadresse_*, sist_lastet_ned
         $stmt = $this->db->prepare("
             INSERT INTO matrikkel_personer (
-                matrikkel_person_id, uuid, nummer, navn, sist_lastet_ned
+                matrikkel_person_id, uuid, nummer, navn, 
+                postadresse_adresselinje1, postadresse_adresselinje2, postadresse_adresselinje3,
+                postadresse_postnummer, postadresse_poststed, postadresse_land_kode,
+                sist_lastet_ned
             ) VALUES (
-                ?, ?, ?, ?, CURRENT_TIMESTAMP
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP
             )
             ON CONFLICT (matrikkel_person_id) DO UPDATE SET
                 uuid = EXCLUDED.uuid,
                 nummer = EXCLUDED.nummer,
                 navn = EXCLUDED.navn,
+                postadresse_adresselinje1 = EXCLUDED.postadresse_adresselinje1,
+                postadresse_adresselinje2 = EXCLUDED.postadresse_adresselinje2,
+                postadresse_adresselinje3 = EXCLUDED.postadresse_adresselinje3,
+                postadresse_postnummer = EXCLUDED.postadresse_postnummer,
+                postadresse_poststed = EXCLUDED.postadresse_poststed,
+                postadresse_land_kode = EXCLUDED.postadresse_land_kode,
                 sist_lastet_ned = CURRENT_TIMESTAMP
             RETURNING id
         ");
@@ -219,7 +271,13 @@ class PersonImportService
             $personId,
             $uuid,
             $fodselsnummer,
-            $navn
+            $navn,
+            $postadresse_adresselinje1,
+            $postadresse_adresselinje2,
+            $postadresse_adresselinje3,
+            $postadresse_postnummer,
+            $postadresse_poststed,
+            $postadresse_land_kode
         ]);
         
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -278,18 +336,70 @@ class PersonImportService
                 : $orgformKode;
         }
         
+        // Extract postadresse (MottakerAdresse structure)
+        // Note: API often returns data in adresselinje2+3, not starting from adresselinje1
+        // We normalize by shifting up if adresselinje1 is empty
+        $postadresse_adresselinje1 = null;
+        $postadresse_adresselinje2 = null;
+        $postadresse_adresselinje3 = null;
+        $postadresse_postnummer = null;
+        $postadresse_poststed = null;
+        $postadresse_land_kode = null;
+        
+        if (isset($person->postadresse)) {
+            $pa = $person->postadresse;
+            $adresselinje1 = $pa->adresselinje1 ?? null;
+            $adresselinje2 = $pa->adresselinje2 ?? null;
+            $adresselinje3 = $pa->adresselinje3 ?? null;
+            
+            // Normalize: If adresselinje1 is empty, shift lines up
+            if (empty($adresselinje1) && !empty($adresselinje2)) {
+                $postadresse_adresselinje1 = $adresselinje2;
+                $postadresse_adresselinje2 = $adresselinje3;
+                $postadresse_adresselinje3 = null;
+            } else {
+                $postadresse_adresselinje1 = $adresselinje1;
+                $postadresse_adresselinje2 = $adresselinje2;
+                $postadresse_adresselinje3 = $adresselinje3;
+            }
+            
+            // Parse postnummer and poststed from the line with postnummer (after normalization)
+            // Check adresselinje2 first (most common after normalization), then adresselinje3
+            if ($postadresse_adresselinje2 && preg_match('/^(\d{4})\s+(.+)$/', $postadresse_adresselinje2, $matches)) {
+                $postadresse_postnummer = $matches[1];
+                $postadresse_poststed = $matches[2];
+            } elseif ($postadresse_adresselinje3 && preg_match('/^(\d{4})\s+(.+)$/', $postadresse_adresselinje3, $matches)) {
+                $postadresse_postnummer = $matches[1];
+                $postadresse_poststed = $matches[2];
+            }
+            
+            // landKodeId is a LandKodeId object with value property
+            if (isset($pa->landKodeId) && isset($pa->landKodeId->value)) {
+                $postadresse_land_kode = $pa->landKodeId->value;
+            }
+        }
+        
         // FIRST: Always insert into matrikkel_personer (parent table)
         // Schema columns: id, matrikkel_person_id, uuid, nummer, navn, postadresse_*, sist_lastet_ned
         $stmt = $this->db->prepare("
             INSERT INTO matrikkel_personer (
-                matrikkel_person_id, uuid, nummer, navn, sist_lastet_ned
+                matrikkel_person_id, uuid, nummer, navn,
+                postadresse_adresselinje1, postadresse_adresselinje2, postadresse_adresselinje3,
+                postadresse_postnummer, postadresse_poststed, postadresse_land_kode,
+                sist_lastet_ned
             ) VALUES (
-                ?, ?, ?, ?, CURRENT_TIMESTAMP
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP
             )
             ON CONFLICT (matrikkel_person_id) DO UPDATE SET
                 uuid = EXCLUDED.uuid,
                 nummer = EXCLUDED.nummer,
                 navn = EXCLUDED.navn,
+                postadresse_adresselinje1 = EXCLUDED.postadresse_adresselinje1,
+                postadresse_adresselinje2 = EXCLUDED.postadresse_adresselinje2,
+                postadresse_adresselinje3 = EXCLUDED.postadresse_adresselinje3,
+                postadresse_postnummer = EXCLUDED.postadresse_postnummer,
+                postadresse_poststed = EXCLUDED.postadresse_poststed,
+                postadresse_land_kode = EXCLUDED.postadresse_land_kode,
                 sist_lastet_ned = CURRENT_TIMESTAMP
             RETURNING id
         ");
@@ -298,7 +408,13 @@ class PersonImportService
             $juridiskPersonId,
             $uuid,
             $organisasjonsnummer,
-            $navn
+            $navn,
+            $postadresse_adresselinje1,
+            $postadresse_adresselinje2,
+            $postadresse_adresselinje3,
+            $postadresse_postnummer,
+            $postadresse_poststed,
+            $postadresse_land_kode
         ]);
         
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
