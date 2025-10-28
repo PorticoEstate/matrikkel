@@ -1,5 +1,5 @@
-# Use PHP 8.4 with Apache
-FROM php:8.4-apache
+# Use PHP 8.3 with Apache
+FROM php:8.3-apache
 
 # Set proxy environment variables if needed
 ARG HTTP_PROXY
