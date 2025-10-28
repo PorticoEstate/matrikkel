@@ -4,7 +4,9 @@
  * Date: 2025-05-28
  */
 
-namespace Iaasen\Matrikkel\LocalDb;
+namespace Iaasen\Matrikkel\LocalDb\deprecated;
+
+use Iaasen\Matrikkel\LocalDb\AbstractTable;
 
 /**
  * LEGACY: CSV-based address import to old_matrikkel_adresser table

@@ -7,8 +7,8 @@
 namespace Iaasen\Matrikkel\LocalDb\deprecated;
 
 use Iaasen\Debug\Timer;
-use Iaasen\Matrikkel\LocalDb\AdresseTable;
-use Iaasen\Matrikkel\LocalDb\BruksenhetTable;
+use Iaasen\Matrikkel\LocalDb\deprecated\AdresseTable;
+use Iaasen\Matrikkel\LocalDb\deprecated\BruksenhetTable;
 use SplFileObject;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use ZipArchive;
