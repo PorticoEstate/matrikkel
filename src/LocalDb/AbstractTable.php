@@ -6,7 +6,6 @@
 
 namespace Iaasen\Matrikkel\LocalDb;
 
-use Iaasen\DateTime;
 use Laminas\Db\Adapter\Adapter;
 
 class AbstractTable
@@ -129,15 +128,6 @@ class AbstractTable
         };
         
         return PHP_EOL . 'ON CONFLICT (' . $primaryKeyClause . ') DO UPDATE SET ' . $updateString;
-    }
-
-    public function deleteOldRows() : int
-    {
-        $date = new DateTime();
-        $date->modify('-3 hour'); // Go back 3 hours to get before UTC in case of timezone errors
-        $sql = 'DELETE FROM ' . $this->tableName . ' WHERE timestamp_created < \'' . $date->formatMysql() . '\';';
-        $result = $this->dbAdapter->query($sql)->execute();
-        return $result->getAffectedRows();
     }
 
     public function countDbAddressRows() : int {
