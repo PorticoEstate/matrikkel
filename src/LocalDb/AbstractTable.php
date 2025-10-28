@@ -136,11 +136,4 @@ class AbstractTable
         return current($result->current());
     }
 
-    public function truncateTable(): void
-    {
-        if(!str_starts_with($this->tableName, 'matrikkel')) return;
-        $sql = 'TRUNCATE TABLE ' . $this->tableName . ';';
-        $this->dbAdapter->query($sql)->execute();
-    }
-
 }
