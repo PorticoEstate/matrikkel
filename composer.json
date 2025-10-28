@@ -13,17 +13,12 @@
         "ext-iconv": "*",
         "ext-zip": "*",
         "laminas/laminas-db": "*",
-        "laminas/laminas-servicemanager": "*",
         "laminas/laminas-soap": "*",
-        "nyholm/psr7": "^1.8",
         "symfony/console": "^7",
         "symfony/dotenv": "^7",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "^7",
-        "symfony/http-client": "^7",
-        "symfony/mailer": "7.*",
         "symfony/runtime": "^7",
-        "symfony/validator": "7.*",
         "symfony/yaml": "^7"
     },
     "suggest": {
