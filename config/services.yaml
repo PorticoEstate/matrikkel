@@ -44,15 +44,9 @@ services:
     Iaasen\Matrikkel\Client\KommuneClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\KommuneClient ]
-    Iaasen\Matrikkel\Client\KodelisteClient:
-        factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
-        arguments: [ Iaasen\Matrikkel\Client\KodelisteClient ]
     Iaasen\Matrikkel\Client\StoreClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\StoreClient ]
-    Iaasen\Matrikkel\Client\MatrikkelsokClient:
-        factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
-        arguments: [ Iaasen\Matrikkel\Client\MatrikkelsokClient ]
     Iaasen\Matrikkel\Client\MatrikkelenhetClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\MatrikkelenhetClient ]
