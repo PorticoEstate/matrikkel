@@ -32,7 +32,7 @@ cp .env.example .env
 
 ### Manual Setup
 
-- PHP 8.2+
+- PHP 8.4+
 - Required PHP extensions:
   - `ext-soap` (for SOAP API)
   - `ext-sqlite3` (for local database)
