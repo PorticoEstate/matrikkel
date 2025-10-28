@@ -71,9 +71,9 @@ class MatrikkelenhetClient extends AbstractSoapClient
         try {
             $response = $this->__call('findMatrikkelenheter', [$params]);
             
-            error_log("[MatrikkelenhetClient] Raw response: " . print_r($response, true));
-            error_log("[MatrikkelenhetClient] Last request XML: " . $this->getLastRequest());
-            error_log("[MatrikkelenhetClient] Last response XML: " . substr($this->getLastResponse(), 0, 2000));
+        //    error_log("[MatrikkelenhetClient] Raw response: " . print_r($response, true));
+        //    error_log("[MatrikkelenhetClient] Last request XML: " . $this->getLastRequest());
+        //    error_log("[MatrikkelenhetClient] Last response XML: " . substr($this->getLastResponse(), 0, 2000));
             
             // Parse response - returns MatrikkelenhetIdList
             $items = [];
