@@ -4,7 +4,7 @@
  * Date: 29.05.2024
  */
 
-namespace Iaasen\Matrikkel\LocalDb;
+namespace Iaasen\Matrikkel\LocalDb\deprecated;
 
 use Iaasen\DateTime;
 use Iaasen\Matrikkel\Entity\Matrikkelsok\Vegadresse;

@@ -10,7 +10,7 @@ use Iaasen\Debug\Timer;
 use Iaasen\Matrikkel\Entity\Matrikkelsok\Eiendom;
 use Iaasen\Matrikkel\Entity\Matrikkelsok\Veg;
 use Iaasen\Matrikkel\Entity\Matrikkelsok\Vegadresse;
-use Iaasen\Matrikkel\LocalDb\AdresseSokService;
+use Iaasen\Matrikkel\LocalDb\deprecated\AdresseSokService;
 use Iaasen\Matrikkel\Service\MatrikkelsokService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
