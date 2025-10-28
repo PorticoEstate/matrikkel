@@ -485,7 +485,7 @@ class MatrikkelApiController extends AbstractController
             $array = [];
             
             // Handle DateTime objects specially
-            if ($data instanceof \DateTime || $data instanceof \Iaasen\DateTime) {
+            if ($data instanceof \DateTime ) {
                 return $data->format('c');
             }
             
