@@ -212,7 +212,8 @@ HELP
             // Step 4: Import bygninger (API-filtered)
             $io->section('Step 4/5: Importing bygninger (API-filtered)');
             $result = $this->bygningImportService->importBygningerForMatrikkelenheter(
-                $filteredMatrikkelenheter
+                $filteredMatrikkelenheter,
+                $io
             );
             $io->success(sprintf(
                 'Imported bygninger: %d (with %d relations to matrikkelenheter)',

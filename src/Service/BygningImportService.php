@@ -8,6 +8,7 @@ use Iaasen\Matrikkel\Client\BygningClient;
 use Iaasen\Matrikkel\Client\StoreClient;
 use Iaasen\Matrikkel\Client\BygningId;
 use Iaasen\Matrikkel\Client\MatrikkelenhetId;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Import bygninger using two-step API pattern:
@@ -29,17 +30,29 @@ class BygningImportService
      * Import bygninger for given matrikkelenhet IDs using two-step pattern
      *
      * @param array<int> $matrikkelenhetIds Array of matrikkelenhet IDs to find bygninger for
+     * @param SymfonyStyle|null $io Console output for progress indication
      * @return array{bygninger: int, relations: int} Count of imported bygninger and relations
      */
-    public function importBygningerForMatrikkelenheter(array $matrikkelenhetIds): array
+    public function importBygningerForMatrikkelenheter(array $matrikkelenhetIds, ?SymfonyStyle $io = null): array
     {
         if (empty($matrikkelenhetIds)) {
             return ['bygninger' => 0, 'relations' => 0];
         }
 
         // Step 1: Find bygning IDs for these matrikkelenheter (in batches)
+        if ($io) {
+            $io->text("Finner bygning-IDs via API...");
+        }
+        
         $allBygningIds = [];
         $bygningToMatrikkelMap = []; // Track which bygninger belong to which matrikkelenheter
+
+        // Create progress bar for Step 1
+        $progressBar = null;
+        if ($io) {
+            $progressBar = $io->createProgressBar(count($matrikkelenhetIds));
+            $progressBar->setFormat('very_verbose');
+        }
 
         foreach (array_chunk($matrikkelenhetIds, self::BATCH_SIZE_IDS) as $batch) {
             $matrikkelenhetIdObjects = array_map(
@@ -75,19 +88,41 @@ class BygningImportService
                     }
                 }
             }
+            
+            if ($progressBar) {
+                $progressBar->advance(count($batch));
+            }
+        }
+
+        if ($progressBar) {
+            $progressBar->finish();
+            $io->newLine(2);
         }
 
         if (empty($allBygningIds)) {
+            if ($io) {
+                $io->warning("Ingen bygninger funnet for matrikkelenhetene!");
+            }
             return ['bygninger' => 0, 'relations' => 0];
         }
 
         $allBygningIds = array_unique($allBygningIds);
-        error_log("Total unique bygning IDs found: " . count($allBygningIds));
-        error_log("First 5 bygning IDs: " . print_r(array_slice($allBygningIds, 0, 5), true));
+        
+        if ($io) {
+            $io->success("Funnet " . count($allBygningIds) . " bygning-IDs");
+            $io->text("Henter fullstendige bygning-objekter...");
+        }
 
         // Step 2: Fetch full bygning objects via StoreClient (in batches)
         $bygningerCount = 0;
         $relationsCount = 0;
+
+        // Create progress bar for Step 2
+        $progressBar2 = null;
+        if ($io) {
+            $progressBar2 = $io->createProgressBar(count($allBygningIds));
+            $progressBar2->setFormat('very_verbose');
+        }
 
         foreach (array_chunk($allBygningIds, self::BATCH_SIZE_OBJECTS) as $batch) {
             $bygningIdObjects = array_map(
@@ -115,7 +150,20 @@ class BygningImportService
                         $relationsCount++;
                     }
                 }
+                
+                if ($progressBar2) {
+                    $progressBar2->advance();
+                }
             }
+        }
+
+        if ($progressBar2) {
+            $progressBar2->finish();
+            $io->newLine(2);
+        }
+
+        if ($io) {
+            $io->success("Importert $bygningerCount bygninger og $relationsCount relasjoner");
         }
 
         return ['bygninger' => $bygningerCount, 'relations' => $relationsCount];
