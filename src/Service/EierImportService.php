@@ -135,24 +135,13 @@ class EierImportService
                 $currentBatch, $totalBatches, count($idBatch)));
             
             try {
-                // Build ID array for SOAP call
-                $matrikkelBubbleIds = array_map(function($id) {
-                    return ['value' => $id];
+                // Build ID array for StoreClient
+                $bubbleIds = array_map(function($id) {
+                    return (object)['value' => $id];
                 }, $idBatch);
                 
                 // Fetch from StoreService
-                $response = $this->storeClient->getObjects([
-                    'ids' => ['item' => $matrikkelBubbleIds],
-                    'matrikkelContext' => $this->buildMatrikkelContext()
-                ]);
-                
-                // Extract objects from response
-                $objects = [];
-                if (isset($response->return->item)) {
-                    $objects = is_array($response->return->item) 
-                        ? $response->return->item 
-                        : [$response->return->item];
-                }
+                $objects = $this->storeClient->getObjects($bubbleIds);
                 
                 // Process each object - classify and insert
                 foreach ($objects as $eier) {
@@ -233,24 +222,13 @@ class EierImportService
                 $currentBatch, $totalBatches, count($idBatch)));
             
             try {
-                // Build ID array for SOAP call
-                $matrikkelBubbleIds = array_map(function($id) {
-                    return ['value' => $id];
+                // Build ID array for StoreClient
+                $bubbleIds = array_map(function($id) {
+                    return (object)['value' => $id];
                 }, $idBatch);
                 
                 // Fetch persons from StoreService
-                $response = $this->storeClient->getObjects([
-                    'ids' => ['item' => $matrikkelBubbleIds],
-                    'matrikkelContext' => $this->buildMatrikkelContext()
-                ]);
-                
-                // Extract objects from response
-                $objects = [];
-                if (isset($response->return->item)) {
-                    $objects = is_array($response->return->item) 
-                        ? $response->return->item 
-                        : [$response->return->item];
-                }
+                $objects = $this->storeClient->getObjects($bubbleIds);
                 
                 // Insert into database
                 foreach ($objects as $person) {
@@ -290,24 +268,13 @@ class EierImportService
                 $currentBatch, $totalBatches, count($idBatch)));
             
             try {
-                // Build ID array for SOAP call
-                $matrikkelBubbleIds = array_map(function($id) {
-                    return ['value' => $id];
+                // Build ID array for StoreClient
+                $bubbleIds = array_map(function($id) {
+                    return (object)['value' => $id];
                 }, $idBatch);
                 
                 // Fetch juridiske personer from StoreService
-                $response = $this->storeClient->getObjects([
-                    'ids' => ['item' => $matrikkelBubbleIds],
-                    'matrikkelContext' => $this->buildMatrikkelContext()
-                ]);
-                
-                // Extract objects from response
-                $objects = [];
-                if (isset($response->return->item)) {
-                    $objects = is_array($response->return->item) 
-                        ? $response->return->item 
-                        : [$response->return->item];
-                }
+                $objects = $this->storeClient->getObjects($bubbleIds);
                 
                 // Insert into database
                 foreach ($objects as $juridiskPerson) {
@@ -328,19 +295,5 @@ class EierImportService
         }
         
         return $totalImported;
-    }
-    
-    /**
-     * Build MatrikkelContext for SOAP calls
-     */
-    private function buildMatrikkelContext(): array
-    {
-        return [
-            'locale' => 'no_NO',
-            'brukOriginaleKoordinater' => false,
-            'koordinatsystemKodeId' => ['value' => 84],
-            'systemVersion' => '3.14',
-            'klientIdentifikasjon' => 'MatrikkelImport/1.0',
-        ];
     }
 }
