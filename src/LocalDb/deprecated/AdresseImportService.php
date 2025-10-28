@@ -4,9 +4,11 @@
  * Date: 22.05.2024
  */
 
-namespace Iaasen\Matrikkel\LocalDb;
+namespace Iaasen\Matrikkel\LocalDb\deprecated;
 
 use Iaasen\Debug\Timer;
+use Iaasen\Matrikkel\LocalDb\AdresseTable;
+use Iaasen\Matrikkel\LocalDb\BruksenhetTable;
 use SplFileObject;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use ZipArchive;

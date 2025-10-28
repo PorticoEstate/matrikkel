@@ -6,7 +6,7 @@
 
 namespace Iaasen\Matrikkel\Console;
 
-use Iaasen\Matrikkel\LocalDb\AdresseImportService;
+use Iaasen\Matrikkel\LocalDb\deprecated\AdresseImportService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
