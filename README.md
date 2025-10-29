@@ -323,6 +323,10 @@ The project uses PostgreSQL to store imported data. The complete schema includes
 - **`matrikkel_bruksenheter`** - Property units (apartments, etc.)
 - **`matrikkel_adresser`** - Addresses
 
+**Visual Schema Diagram**:
+
+![Database Schema](doc/matrikkel_data.svg)
+
 For the complete database schema, see `migrations/V1__baseline_schema.sql`.
 
 ## 🔗 API Reference
