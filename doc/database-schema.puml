@@ -1,0 +1,306 @@
+@startuml Matrikkel Database Schema
+
+' Styling
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+skinparam roundcorner 10
+
+' Main entities color scheme
+skinparam entity {
+  BackgroundColor<<cadastral>> #E1F5FF
+  BackgroundColor<<person>> #FFF9C4
+  BackgroundColor<<building>> #F3E5F5
+  BackgroundColor<<address>> #E8F5E9
+  BackgroundColor<<junction>> #FFEBEE
+}
+
+' ============================================================================
+' CADASTRAL & ADMINISTRATIVE
+' ============================================================================
+
+entity "matrikkel_kommuner" <<cadastral>> {
+  * kommune_id : SERIAL <<PK>>
+  --
+  * kommunenummer : INTEGER <<UK>>
+  * kommunenavn : VARCHAR(255)
+  * fylkesnummer : INTEGER
+  fylkesnavn : VARCHAR(255)
+  gyldig_til_dato : DATE
+  koordinatsystem_kode : VARCHAR(50)
+  eksklusiv_bruker : VARCHAR(100)
+  nedsatt_konsesjonsgrense : BOOLEAN
+  senterpunkt_nord : DOUBLE PRECISION
+  senterpunkt_ost : DOUBLE PRECISION
+  timestamp_created : TIMESTAMP
+  timestamp_updated : TIMESTAMP
+}
+
+entity "matrikkel_matrikkelenheter" <<cadastral>> {
+  * matrikkelenhet_id : BIGINT <<PK>>
+  --
+  * kommunenummer : INTEGER <<FK>>
+  * gardsnummer : INTEGER
+  * bruksnummer : INTEGER
+  festenummer : INTEGER
+  seksjonsnummer : INTEGER
+  * matrikkelnummer_tekst : VARCHAR(50)
+  historisk_oppgitt_areal : DOUBLE PRECISION
+  areal_kilde : VARCHAR(100)
+  tinglyst : BOOLEAN
+  skyld : DOUBLE PRECISION
+  bruksnavn : VARCHAR(255)
+  etableringsdato : DATE
+  er_seksjonert : BOOLEAN
+  har_aktive_festegrunner : BOOLEAN
+  har_anmerket_klage : BOOLEAN
+  har_grunnforurensing : BOOLEAN
+  har_kulturminne : BOOLEAN
+  utgatt : BOOLEAN
+  nymatrikulert : BOOLEAN
+  timestamp_created : TIMESTAMP
+  timestamp_updated : TIMESTAMP
+}
+
+' ============================================================================
+' PERSON ENTITIES
+' ============================================================================
+
+entity "matrikkel_personer" <<person>> {
+  * id : BIGSERIAL <<PK>>
+  --
+  * matrikkel_person_id : BIGINT <<UK>>
+  uuid : VARCHAR(36)
+  nummer : VARCHAR(50)
+  navn : VARCHAR(500)
+  postadresse_adresselinje1 : VARCHAR(200)
+  postadresse_adresselinje2 : VARCHAR(200)
+  postadresse_adresselinje3 : VARCHAR(200)
+  postadresse_postnummer : VARCHAR(10)
+  postadresse_poststed : VARCHAR(100)
+  postadresse_land_kode : VARCHAR(10)
+  * sist_lastet_ned : TIMESTAMP
+}
+
+entity "matrikkel_fysiske_personer" <<person>> {
+  * id : BIGINT <<PK,FK>>
+  --
+  fodselsnummer : VARCHAR(11) <<UK>>
+  etternavn : VARCHAR(200)
+  fornavn : VARCHAR(200)
+  person_status_kode_id : VARCHAR(50)
+  bostedsadresse_kommunenummer : VARCHAR(10)
+  bostedsadresse_adressekode : BIGINT
+  bostedsadresse_husnummer : INTEGER
+  bostedsadresse_husbokstav : VARCHAR(10)
+  bostedsadresse_postnummer : VARCHAR(10)
+  hjemlandsadresse_adresselinje1 : VARCHAR(200)
+  hjemlandsadresse_adresselinje2 : VARCHAR(200)
+  hjemlandsadresse_adresselinje3 : VARCHAR(200)
+  hjemlandsadresse_land_kode_id : VARCHAR(10)
+}
+
+entity "matrikkel_juridiske_personer" <<person>> {
+  * id : BIGINT <<PK,FK>>
+  --
+  organisasjonsnummer : VARCHAR(20) <<UK>>
+  organisasjonsform_kode : VARCHAR(50)
+  slettet_dato : DATE
+  forretningsadresse_adresselinje1 : VARCHAR(200)
+  forretningsadresse_adresselinje2 : VARCHAR(200)
+  forretningsadresse_adresselinje3 : VARCHAR(200)
+  forretningsadresse_postnummer : VARCHAR(10)
+  forretningsadresse_poststed : VARCHAR(100)
+  forretningsadresse_land_kode : VARCHAR(10)
+}
+
+entity "matrikkel_eierforhold" <<junction>> {
+  * id : BIGSERIAL <<PK>>
+  --
+  * matrikkelenhet_id : BIGINT <<FK>>
+  matrikkel_eierforhold_id : BIGINT
+  uuid : VARCHAR(36)
+  eierforhold_type : VARCHAR(50)
+  andel_teller : INTEGER
+  andel_nevner : INTEGER
+  dato_fra : DATE
+  person_id : BIGINT //(deprecated)//
+  juridisk_person_id : BIGINT //(deprecated)//
+  fysisk_person_id : BIGINT <<FK>>
+  juridisk_person_entity_id : BIGINT <<FK>>
+  eier_matrikkelenhet_id : BIGINT
+  andelsnummer : INTEGER
+  tinglyst : BOOLEAN
+  * sist_lastet_ned : TIMESTAMP
+}
+
+' ============================================================================
+' BUILDING ENTITIES
+' ============================================================================
+
+entity "matrikkel_bygninger" <<building>> {
+  * bygning_id : BIGINT <<PK>>
+  --
+  * matrikkel_bygning_nummer : BIGINT
+  lopenummer : INTEGER
+  uuid : VARCHAR(36)
+  bygningstype_kode_id : INTEGER
+  bygningsstatus_kode_id : INTEGER
+  bebygd_areal : DOUBLE PRECISION
+  bruksareal : DOUBLE PRECISION
+  uten_bebygd_areal : BOOLEAN
+  ufullstendig_areal : BOOLEAN
+  byggeaar : INTEGER
+  har_sefrakminne : BOOLEAN
+  har_kulturminne : BOOLEAN
+  har_heis : BOOLEAN
+  skjermingsverdig : BOOLEAN
+  nymatrikulert : BOOLEAN
+  avlops_kode_id : INTEGER
+  vannforsynings_kode_id : INTEGER
+  oppvarmings_kode_ids : INTEGER[]
+  energikilde_kode_ids : INTEGER[]
+  naringsgruppe_kode_id : INTEGER
+  opprinnelses_kode_id : INTEGER
+  antall_etasjer : INTEGER
+  representasjonspunkt_x : DOUBLE PRECISION
+  representasjonspunkt_y : DOUBLE PRECISION
+  representasjonspunkt_z : DOUBLE PRECISION
+  koordinatsystem : VARCHAR(50)
+  * sist_lastet_ned : TIMESTAMP
+  * opprettet : TIMESTAMP
+  * oppdatert : TIMESTAMP
+}
+
+entity "matrikkel_bygning_matrikkelenhet" <<junction>> {
+  * bygning_id : BIGINT <<PK,FK>>
+  * matrikkelenhet_id : BIGINT <<PK,FK>>
+  --
+  * opprettet : TIMESTAMP
+}
+
+entity "matrikkel_bruksenheter" <<building>> {
+  * bruksenhet_id : BIGINT <<PK>>
+  --
+  * matrikkelenhet_id : BIGINT <<FK>>
+  bygning_id : BIGINT <<FK>>
+  lopenummer : INTEGER
+  uuid : VARCHAR(36)
+  bruksenhettype_kode_id : INTEGER
+  etasjeplan_kode_id : INTEGER
+  etasjenummer : INTEGER
+  adresse_id : BIGINT
+  antall_rom : INTEGER
+  antall_bad : INTEGER
+  antall_wc : INTEGER
+  bruksareal : DOUBLE PRECISION
+  kjokkentilgang_kode_id : INTEGER
+  skal_utga : BOOLEAN
+  bygg_skjermingsverdig : BOOLEAN
+  kostra_funksjon_kode_id : INTEGER
+  * sist_lastet_ned : TIMESTAMP
+  * opprettet : TIMESTAMP
+  * oppdatert : TIMESTAMP
+}
+
+' ============================================================================
+' ADDRESS ENTITIES
+' ============================================================================
+
+entity "matrikkel_veger" <<address>> {
+  * veg_id : BIGINT <<PK>>
+  --
+  * kommune_id : BIGINT
+  * adressekode : INTEGER
+  * adressenavn : VARCHAR(200)
+  kort_adressenavn : VARCHAR(100)
+  stedsnummer : VARCHAR(50)
+  uuid : VARCHAR(36)
+  * sist_lastet_ned : TIMESTAMP
+  * opprettet : TIMESTAMP
+  * oppdatert : TIMESTAMP
+}
+
+entity "matrikkel_adresser" <<address>> {
+  * adresse_id : BIGINT <<PK>>
+  --
+  * adressetype : VARCHAR(20)
+  matrikkelenhet_id : BIGINT <<FK>>
+  representasjonspunkt_x : DOUBLE PRECISION
+  representasjonspunkt_y : DOUBLE PRECISION
+  representasjonspunkt_z : DOUBLE PRECISION
+  koordinatsystem : VARCHAR(50)
+  adressetilleggsnavn : VARCHAR(200)
+  kortnavn : VARCHAR(100)
+  uuid : VARCHAR(36)
+  * sist_lastet_ned : TIMESTAMP
+  * opprettet : TIMESTAMP
+  * oppdatert : TIMESTAMP
+}
+
+entity "matrikkel_vegadresser" <<address>> {
+  * vegadresse_id : BIGINT <<PK,FK>>
+  --
+  * veg_id : BIGINT <<FK>>
+  nummer : INTEGER
+  bokstav : VARCHAR(1)
+}
+
+entity "matrikkel_matrikkelenhet_adresse" <<junction>> {
+  * matrikkelenhet_id : BIGINT <<PK,FK>>
+  * adresse_id : BIGINT <<PK,FK>>
+  --
+  * opprettet : TIMESTAMP
+}
+
+' ============================================================================
+' RELATIONSHIPS
+' ============================================================================
+
+' Kommuner ↔ Matrikkelenheter
+matrikkel_kommuner ||--o{ matrikkel_matrikkelenheter : "has many"
+
+' Person inheritance
+matrikkel_personer ||--|| matrikkel_fysiske_personer : "is a"
+matrikkel_personer ||--|| matrikkel_juridiske_personer : "is a"
+
+' Eierforhold relationships
+matrikkel_matrikkelenheter ||--o{ matrikkel_eierforhold : "owned by"
+matrikkel_fysiske_personer ||--o{ matrikkel_eierforhold : "owns"
+matrikkel_juridiske_personer ||--o{ matrikkel_eierforhold : "owns"
+
+' Bygning relationships
+matrikkel_bygninger ||--o{ matrikkel_bygning_matrikkelenhet : "located on"
+matrikkel_matrikkelenheter ||--o{ matrikkel_bygning_matrikkelenhet : "has buildings"
+matrikkel_bygninger ||--o{ matrikkel_bruksenheter : "contains"
+matrikkel_matrikkelenheter ||--o{ matrikkel_bruksenheter : "belongs to"
+
+' Address relationships
+matrikkel_veger ||--o{ matrikkel_vegadresser : "has addresses"
+matrikkel_adresser ||--|| matrikkel_vegadresser : "is a"
+matrikkel_matrikkelenheter ||--o{ matrikkel_adresser : "has address"
+matrikkel_matrikkelenheter ||--o{ matrikkel_matrikkelenhet_adresse : "has"
+matrikkel_adresser ||--o{ matrikkel_matrikkelenhet_adresse : "belongs to"
+
+' Notes
+note right of matrikkel_eierforhold
+  **Multiple ownership support**
+  - One matrikkelenhet can have many eierforhold
+  - Supports sameie (joint ownership)
+  - Tracks ownership shares (andel_teller/nevner)
+  - Up to 237 owners on single property in dataset
+end note
+
+note right of matrikkel_personer
+  **Person hierarchy**
+  - Base table for all persons
+  - Specialized by fysiske/juridiske personer
+  - Single Table Inheritance pattern
+end note
+
+note bottom of matrikkel_bygning_matrikkelenhet
+  **Many-to-Many**
+  Buildings can span
+  multiple properties
+end note
+
+@enduml
