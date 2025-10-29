@@ -410,7 +410,7 @@ Services are configured in `config/services.yaml` using the factory pattern for 
 
 ## 📄 License
 
-GPL-3.0-or-later
+GPL-3.0-or-later — see the full text in [LICENSE](LICENSE).
 
 ## 🤝 Contributing
 
