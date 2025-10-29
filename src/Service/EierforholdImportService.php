@@ -102,8 +102,7 @@ class EierforholdImportService
                         ? $obj->eierforhold->item 
                         : [$obj->eierforhold->item];
                     
-                    // For now, save to matrikkel_eierforhold table
-                    // Ta første eierforhold (primær eier) - TODO: Håndter alle eierforhold
+                    // Save ALL eierforhold (multiple owners per matrikkelenhet)
                     foreach ($items as $eierforhold) {
                         if (!isset($eierforhold->eierId)) {
                             continue;
@@ -116,27 +115,48 @@ class EierforholdImportService
                             continue;
                         }
                         
+                        // Extract eierforhold details
+                        $eierforholdId = isset($eierforhold->id) ? $eierforhold->id : null;
+                        $andelTeller = isset($eierforhold->andel->teller) ? $eierforhold->andel->teller : null;
+                        $andelNevner = isset($eierforhold->andel->nevner) ? $eierforhold->andel->nevner : null;
+                        $andelsnummer = isset($eierforhold->andelsnummer) ? $eierforhold->andelsnummer : null;
+                        $tinglyst = true; // Assume tinglyst if from eierforhold (not ikkeTinglystEierforhold)
+                        
                         // Insert into matrikkel_eierforhold table
                         try {
-                            // Check if eierforhold already exists
-                            $checkStmt = $this->db->prepare(
-                                "SELECT id FROM matrikkel_eierforhold 
-                                WHERE matrikkelenhet_id = ? AND person_id = ?"
-                            );
-                            $checkStmt->execute([$matrikkelenhetId, $eierIdValue]);
+                            // Check if this specific eierforhold already exists
+                            // Use matrikkel_eierforhold_id for unique identification if available
+                            if ($eierforholdId) {
+                                $checkStmt = $this->db->prepare(
+                                    "SELECT id FROM matrikkel_eierforhold 
+                                    WHERE matrikkelenhet_id = ? AND matrikkel_eierforhold_id = ?"
+                                );
+                                $checkStmt->execute([$matrikkelenhetId, $eierforholdId]);
+                            } else {
+                                // Fallback: check by matrikkelenhet + person_id + andel
+                                $checkStmt = $this->db->prepare(
+                                    "SELECT id FROM matrikkel_eierforhold 
+                                    WHERE matrikkelenhet_id = ? 
+                                    AND person_id = ? 
+                                    AND (andel_teller = ? OR (andel_teller IS NULL AND ? IS NULL))
+                                    AND (andel_nevner = ? OR (andel_nevner IS NULL AND ? IS NULL))"
+                                );
+                                $checkStmt->execute([
+                                    $matrikkelenhetId, 
+                                    $eierIdValue,
+                                    $andelTeller, $andelTeller,
+                                    $andelNevner, $andelNevner
+                                ]);
+                            }
+                            
                             $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
                             
-                            $eierforholdId = isset($eierforhold->id) ? $eierforhold->id : null;
-                            $andelTeller = isset($eierforhold->andel->teller) ? $eierforhold->andel->teller : null;
-                            $andelNevner = isset($eierforhold->andel->nevner) ? $eierforhold->andel->nevner : null;
-                            $andelsnummer = isset($eierforhold->andelsnummer) ? $eierforhold->andelsnummer : null;
-                            $tinglyst = true; // Assume tinglyst if from eierforhold (not ikkeTinglystEierforhold)
-                            
                             if ($existing) {
-                                // Update existing
+                                // Update existing eierforhold
                                 $stmt = $this->db->prepare(
                                     "UPDATE matrikkel_eierforhold SET
                                         matrikkel_eierforhold_id = ?,
+                                        person_id = ?,
                                         andel_teller = ?,
                                         andel_nevner = ?,
                                         andelsnummer = ?,
@@ -146,6 +166,7 @@ class EierforholdImportService
                                 );
                                 $stmt->execute([
                                     $eierforholdId,
+                                    $eierIdValue,
                                     $andelTeller,
                                     $andelNevner,
                                     $andelsnummer,
@@ -153,7 +174,7 @@ class EierforholdImportService
                                     $existing['id']
                                 ]);
                             } else {
-                                // Insert new
+                                // Insert new eierforhold
                                 $stmt = $this->db->prepare(
                                     "INSERT INTO matrikkel_eierforhold (
                                         matrikkelenhet_id,
@@ -182,9 +203,6 @@ class EierforholdImportService
                         } catch (\PDOException $e) {
                             $io->warning("Feil ved lagring av eierforhold for matrikkelenhet $matrikkelenhetId: " . $e->getMessage());
                         }
-                        
-                        // Only save first eierforhold for now (primary owner)
-                        break;
                     }
                 }
                 

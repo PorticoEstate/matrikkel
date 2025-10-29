@@ -52,6 +52,7 @@ class AdresseRepository extends DatabaseRepository
 
     /**
      * Search addresses by text query (address name or matrikkel number)
+     * Focuses on vegadresser with full details including matrikkelenhet relationships
      */
     public function search(string $query, int $limit = 100): array
     {
@@ -59,32 +60,31 @@ class AdresseRepository extends DatabaseRepository
 
         $sql = "
             SELECT 
-                a.adresse_id,
-                a.adressetype,
-                a.matrikkelenhet_id,
-                a.adressetilleggsnavn,
-                a.kortnavn,
-                -- VEGADRESSE fields
-                va.nummer,
+                v.adressenavn AS gatenavn,
+                va.nummer AS husnummer,
                 va.bokstav,
-                v.adressenavn,
                 v.kort_adressenavn,
-                -- MATRIKKELENHET fields
-                me.matrikkelnummer_tekst,
-                me.kommunenummer
-            FROM matrikkel_adresser a
-            LEFT JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
-            LEFT JOIN matrikkel_veger v ON va.veg_id = v.veg_id
-            LEFT JOIN matrikkel_matrikkelenheter me ON a.matrikkelenhet_id = me.matrikkelenhet_id
+                a.adresse_id,
+                a.adressetilleggsnavn,
+                a.representasjonspunkt_x,
+                a.representasjonspunkt_y,
+                v.kommune_id,
+                ma.matrikkelenhet_id,
+                m.matrikkelnummer_tekst
+            FROM 
+                matrikkel_vegadresser va
+                INNER JOIN matrikkel_adresser a ON va.vegadresse_id = a.adresse_id
+                INNER JOIN matrikkel_veger v ON va.veg_id = v.veg_id
+                LEFT JOIN matrikkel_matrikkelenhet_adresse ma ON a.adresse_id = ma.adresse_id
+                LEFT JOIN matrikkel_matrikkelenheter m ON ma.matrikkelenhet_id = m.matrikkelenhet_id
             WHERE 
-                v.adressenavn ILIKE :query
-                OR me.matrikkelnummer_tekst ILIKE :query
-                OR a.kortnavn ILIKE :query
+                a.adressetype = 'VEGADRESSE'
+                AND va.nummer IS NOT NULL
+                AND v.adressenavn ILIKE :query
             ORDER BY 
-                CASE 
-                    WHEN a.adressetype = 'VEGADRESSE' THEN v.adressenavn
-                    ELSE me.matrikkelnummer_tekst
-                END
+                v.adressenavn, 
+                va.nummer, 
+                va.bokstav NULLS FIRST
             LIMIT :limit
         ";
 
