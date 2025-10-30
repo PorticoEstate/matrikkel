@@ -32,7 +32,7 @@
  * $matrikkelenhetIds = $matrikkelenhetClient->findMatrikkelenheterForPerson($personId);
  * ```
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-01-23
  */
 

@@ -12,8 +12,8 @@
 namespace Iaasen\Matrikkel\Service;
 
 use Iaasen\Matrikkel\Client\NedlastningClient;
-use Iaasen\Matrikkel\Client\MatrikkelenhetClient;
 use Iaasen\Matrikkel\Client\StoreClient;
+use Iaasen\Matrikkel\Client\MatrikkelenhetClient;
 use Iaasen\Matrikkel\LocalDb\MatrikkelenhetTable;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -21,8 +21,8 @@ class MatrikkelenhetImportService
 {
     public function __construct(
         private NedlastningClient $nedlastningClient,
-        private MatrikkelenhetClient $matrikkelenhetClient,
         private StoreClient $storeClient,
+        private MatrikkelenhetClient $matrikkelenhetClient,
         private MatrikkelenhetTable $matrikkelenhetTable
     ) {}
     

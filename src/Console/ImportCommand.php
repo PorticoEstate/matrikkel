@@ -29,7 +29,7 @@
  * php bin/console matrikkel:import --kommune=4627 --limit=10
  * ```
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-10-27
  */
 

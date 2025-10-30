@@ -20,7 +20,7 @@
  *   # Filter by personnummer  
  *   php bin/console matrikkel:phase2-import --kommune=4601 --personnummer=12345678901
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-10-22
  */
 

@@ -30,7 +30,7 @@ class DebugMatrikkelenhetCommand extends Command
         
         $io->title("Debug Matrikkelenhet Structure");
         
-        // Fetch first matrikkelenhet
+        // Fetch first matrikkelenhet using NedlastningClient
         $batch = $this->nedlastningClient->findObjekterEtterId(
             0,
             'Matrikkelenhet',

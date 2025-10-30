@@ -50,6 +50,9 @@ services:
     Iaasen\Matrikkel\Client\MatrikkelenhetClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\MatrikkelenhetClient ]
+    Iaasen\Matrikkel\Client\NedlastningClient:
+        factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
+        arguments: [ Iaasen\Matrikkel\Client\NedlastningClient ]
     Iaasen\Matrikkel\Client\PersonClient:
         factory: [ Iaasen\Matrikkel\Client\SoapClientFactory, create ]
         arguments: [ Iaasen\Matrikkel\Client\PersonClient ]

@@ -15,8 +15,8 @@
  * 
  * Pattern copied from BruksenhetImportService (proven working)
  * 
- * @author Matrikkel Integration System
- * @date 2025-10-23 (Recreated)
+ * @author Sigurd Nes
+ * @date 2025-10-23
  */
 
 namespace Iaasen\Matrikkel\Service;

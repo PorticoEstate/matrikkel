@@ -19,7 +19,7 @@
  * - Batch size: 500 matrikkelenheter per StoreService call
  * - For Bergen (50,000 matrikkelenheter): ~100 API-kall
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-01-23
  */
 

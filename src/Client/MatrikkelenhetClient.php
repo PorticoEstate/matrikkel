@@ -1,4 +1,5 @@
 <?php
+
 /**
  * MatrikkelenhetClient - SOAP Client for MatrikkelenhetService
  * 
@@ -12,23 +13,22 @@
  * - Bruk StoreService.getObjects() for å hente komplette objekter etterpå
  * 
  * Two-Step Pattern (Phase 2):
- * 1. MatrikkelenhetClient.findMatrikkelenheterForPerson(personnummer) -> [IDs]
+ * 1. MatrikkelenhetClient.findMatrikkelenheterByNummerForPerson(kommunenr, personnummer) -> [IDs]
  * 2. StoreClient.getObjects([IDs]) -> [komplette matrikkelenheter]
  * 
  * Eksempel bruk:
  * ```php
  * $client = new MatrikkelenhetClient($wsdl, $options);
  * 
- * // Finn matrikkelenheter eid av person
- * $personId = new PersonId(12345678901);
- * $matrikkelenhetIds = $client->findMatrikkelenheterForPerson($personId);
+ * // Finn matrikkelenheter eid av person/organisasjon
+ * $matrikkelenhetIds = $client->findMatrikkelenheterByNummerForPerson(4601, '964338531');
  * 
  * // Hent komplette objekter
  * $storeClient = new StoreClient(...);
  * $matrikkelenheter = $storeClient->getObjects($matrikkelenhetIds);
  * ```
  * 
- * @author Matrikkel Integration System
+ * @author  ingvar.aasen,Sigurd Nes
  * @date 2025-01-23
  */
 
@@ -98,66 +98,6 @@ class MatrikkelenhetClient extends AbstractSoapClient
             error_log("[MatrikkelenhetClient::findMatrikkelenheterByNummerForPerson] SOAP Fault: " . $e->getMessage());
             throw $e;
         }
-    }
-    
-    /**
-     * Finn matrikkelenheter eid av en person (SERVER-SIDE FILTRERING)
-     * 
-     * DEPRECATED: Use findMatrikkelenheterByNummerForPerson() instead.
-     * This method uses findEideMatrikkelenheterForPerson() which doesn't work reliably for juridiske personer.
-     * 
-     * @param PersonId $personId ID for person (fysisk eller juridisk)
-     * @return array Array av MatrikkelenhetId objekter
-     * @throws \SoapFault Hvis API-feil
-     */
-    public function findMatrikkelenheterForPerson($personId): array
-    {
-        $params = [
-            'personId' => $personId,
-            'matrikkelContext' => $this->getMatrikkelContext()
-        ];
-        
-        try {
-            $response = $this->__call('findEideMatrikkelenheterForPerson', [$params]);
-            
-            // Parse response - returns MatrikkelenhetIdList
-            $items = [];
-            if (isset($response->return)) {
-                if (isset($response->return->items)) {
-                    $ids = $response->return->items;
-                    
-                    // Normalize to array
-                    if (!is_array($ids)) {
-                        $ids = [$ids];
-                    }
-                    
-                    $items = $ids;
-                }
-            }
-            
-            error_log("[MatrikkelenhetClient] Found " . count($items) . " matrikkelenheter for person");
-            return $items;
-            
-        } catch (\SoapFault $e) {
-            error_log("[MatrikkelenhetClient::findMatrikkelenheterForPerson] SOAP Fault: " . $e->getMessage());
-            throw $e;
-        }
-    }
-    
-    /**
-     * Finn matrikkelenheter eid av en organisasjon (SERVER-SIDE FILTRERING)
-     * 
-     * Som findMatrikkelenheterForPerson(), men for juridiske personer.
-     * 
-     * @param PersonId $organisasjonId ID for juridisk person (organisasjonsnummer)
-     * @return array Array av MatrikkelenhetId objekter
-     * @throws \SoapFault Hvis API-feil
-     */
-    public function findMatrikkelenheterForOrganisasjon($organisasjonId): array
-    {
-        // Same logic as person, but potentially different query structure
-        // For now, using same method as API treats both as PersonId
-        return $this->findMatrikkelenheterForPerson($organisasjonId);
     }
     
     /**

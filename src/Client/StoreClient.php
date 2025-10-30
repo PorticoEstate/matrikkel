@@ -45,7 +45,7 @@
  * }
  * ```
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-01-23
  */
 

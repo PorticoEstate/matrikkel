@@ -14,7 +14,7 @@
  *   php bin/console matrikkel:phase1-import --kommune=4601
  *   php bin/console matrikkel:phase1-import --kommune=4601 --batch-size=5000
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-10-22
  */
 

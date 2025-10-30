@@ -17,7 +17,7 @@
  * 
  * Result: Only download detail data for relevant matrikkelenheter!
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-01-23
  */
 

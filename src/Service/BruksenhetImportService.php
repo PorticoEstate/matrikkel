@@ -16,7 +16,7 @@
  * - Server-side filtering (only returns IDs for our matrikkelenheter)
  * - Two-step pattern is optimal for performance
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-10-23
  */
 

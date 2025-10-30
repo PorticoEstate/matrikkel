@@ -5,7 +5,7 @@
  * Simple factory to provide PDO instance from environment configuration.
  * Used by services that need direct SQL access (PersonImportService, EierforholdImportService).
  * 
- * @author Matrikkel Integration System
+ * @author Sigurd Nes
  * @date 2025-01-23
  */
 
