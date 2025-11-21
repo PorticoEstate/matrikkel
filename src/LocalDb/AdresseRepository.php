@@ -96,36 +96,76 @@ class AdresseRepository extends DatabaseRepository
 
     /**
      * Find all addresses in a kommune
+     * Returns only the primary address for each building (by lowest husnummer)
      */
     public function findByKommunenummer(int $kommunenummer, int $limit = 1000): array
     {
         $sql = "
-            SELECT 
+            SELECT DISTINCT ON (b.bygning_id)
                 a.adresse_id,
-                a.adressetype,
-                a.matrikkelenhet_id,
-                va.nummer,
+                v.adressenavn as gatenavn,
+                va.nummer as husnummer,
                 va.bokstav,
-                v.adressenavn,
-                me.matrikkelnummer_tekst
-            FROM matrikkel_adresser a
-            LEFT JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
-            LEFT JOIN matrikkel_veger v ON va.veg_id = v.veg_id
-            LEFT JOIN matrikkel_matrikkelenheter me ON a.matrikkelenhet_id = me.matrikkelenhet_id
+                b.matrikkel_bygning_nummer as bygningsnummer,
+                b.lopenummer
+            FROM matrikkel_bygninger b
+            JOIN matrikkel_bygning_matrikkelenhet bme ON b.bygning_id = bme.bygning_id
+            JOIN matrikkel_matrikkelenheter me ON bme.matrikkelenhet_id = me.matrikkelenhet_id
+            JOIN matrikkel_adresser a ON me.matrikkelenhet_id = a.matrikkelenhet_id
+            JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
+            JOIN matrikkel_veger v ON va.veg_id = v.veg_id
+            
             WHERE 
-                me.kommunenummer = :kommunenummer
+                a.adressetype = 'VEGADRESSE'
+                AND me.kommunenummer = :kommunenummer
             ORDER BY 
-                CASE 
-                    WHEN a.adressetype = 'VEGADRESSE' THEN v.adressenavn
-                    ELSE me.matrikkelnummer_tekst
-                END,
+                b.bygning_id,
                 va.nummer,
-                va.bokstav
+                va.bokstav NULLS FIRST
             LIMIT :limit
         ";
 
         return $this->fetchAll($sql, [
             'kommunenummer' => $kommunenummer,
+            'limit' => $limit
+        ]);
+    }
+
+    /**
+     * Find all addresses in a kommune filtered by bygningsnummer
+     * Returns only the primary address for each building (by lowest husnummer)
+     */
+    public function findByKommunenummerAndBygningsnummer(int $kommunenummer, int $bygningsnummer, int $limit = 1000): array
+    {
+        $sql = "
+            SELECT DISTINCT ON (b.bygning_id)
+                a.adresse_id,
+                v.adressenavn as gatenavn,
+                va.nummer as husnummer,
+                va.bokstav,
+                b.matrikkel_bygning_nummer as bygningsnummer,
+                b.lopenummer
+            FROM matrikkel_bygninger b
+            JOIN matrikkel_bygning_matrikkelenhet bme ON b.bygning_id = bme.bygning_id
+            JOIN matrikkel_matrikkelenheter me ON bme.matrikkelenhet_id = me.matrikkelenhet_id
+            JOIN matrikkel_adresser a ON me.matrikkelenhet_id = a.matrikkelenhet_id
+            JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
+            JOIN matrikkel_veger v ON va.veg_id = v.veg_id
+            
+            WHERE 
+                a.adressetype = 'VEGADRESSE'
+                AND b.matrikkel_bygning_nummer = :bygningsnummer
+                AND me.kommunenummer = :kommunenummer
+            ORDER BY 
+                b.bygning_id,
+                va.nummer,
+                va.bokstav NULLS FIRST
+            LIMIT :limit
+        ";
+
+        return $this->fetchAll($sql, [
+            'kommunenummer' => $kommunenummer,
+            'bygningsnummer' => $bygningsnummer,
             'limit' => $limit
         ]);
     }

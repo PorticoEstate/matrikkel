@@ -140,7 +140,18 @@ class AdresseImportService
         
         $progressBar->finish();
         $io->newLine(2);
-        
+
+        // Build reverse lookup: adresse_id => [matrikkelenhet_id, ...]
+        $adresseToMatrikkelenheter = [];
+        foreach ($matrikkelenhetToAdresser as $matrikkelenhetId => $adresseIds) {
+            foreach ($adresseIds as $adresseId) {
+                if (!isset($adresseToMatrikkelenheter[$adresseId])) {
+                    $adresseToMatrikkelenheter[$adresseId] = [];
+                }
+                $adresseToMatrikkelenheter[$adresseId][$matrikkelenhetId] = true;
+            }
+        }
+
         if (empty($allAdresseIds)) {
             $io->warning("Ingen adresser funnet for matrikkelenhetene!");
             return ['adresser' => 0, 'relations' => 0];
@@ -179,7 +190,11 @@ class AdresseImportService
                     $adresseId = (int) $adresse->id->value;
                     
                     // Save base adresse
-                    $this->saveAdresse($adresse);
+                    $primaryMatrikkelenhetId = isset($adresseToMatrikkelenheter[$adresseId])
+                        ? array_key_first($adresseToMatrikkelenheter[$adresseId])
+                        : null;
+
+                    $this->saveAdresse($adresse, $primaryMatrikkelenhetId);
                     $adresseCount++;
                     
                     // Save subclass data if VEGADRESSE
@@ -190,8 +205,8 @@ class AdresseImportService
                     
                     // Save M:N relations
                     // Find all matrikkelenheter that have this adresse
-                    foreach ($matrikkelenhetToAdresser as $matrikkelenhetId => $adresseIds) {
-                        if (in_array($adresseId, $adresseIds)) {
+                    if (isset($adresseToMatrikkelenheter[$adresseId])) {
+                        foreach (array_keys($adresseToMatrikkelenheter[$adresseId]) as $matrikkelenhetId) {
                             $this->saveMatrikkelenhetAdresseRelation($matrikkelenhetId, $adresseId);
                             $relationCount++;
                         }
@@ -214,7 +229,7 @@ class AdresseImportService
     /**
      * Save base Adresse entity to matrikkel_adresser table
      */
-    private function saveAdresse(object $adresse): void
+    private function saveAdresse(object $adresse, ?int $primaryMatrikkelenhetId = null): void
     {
         $adresseId = (int) $adresse->id->value;
         $adresseType = $this->getAdresseType($adresse);
@@ -229,8 +244,9 @@ class AdresseImportService
                 koordinatsystem,
                 adressetilleggsnavn,
                 kortnavn,
-                uuid
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                uuid,
+                matrikkelenhet_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (adresse_id) DO UPDATE SET
                 adressetype = EXCLUDED.adressetype,
                 representasjonspunkt_x = EXCLUDED.representasjonspunkt_x,
@@ -240,6 +256,7 @@ class AdresseImportService
                 adressetilleggsnavn = EXCLUDED.adressetilleggsnavn,
                 kortnavn = EXCLUDED.kortnavn,
                 uuid = EXCLUDED.uuid,
+                matrikkelenhet_id = EXCLUDED.matrikkelenhet_id,
                 oppdatert = CURRENT_TIMESTAMP
         ");
         
@@ -254,7 +271,8 @@ class AdresseImportService
                 : null,
             $adresse->adressetilleggsnavn ?? null,
             $adresse->kortnavn ?? null,
-            null  // uuid - not directly available in response
+            null,  // uuid - not directly available in response
+            $primaryMatrikkelenhetId
         ]);
     }
     

@@ -46,7 +46,8 @@ class MatrikkelApiController extends AbstractController
                 'GET /api/v1/adresse/{id}' => 'Hent adresse på ID',
                 'GET /api/v1/adresse/sok?q={query}&limit={number}' => 'Søk adresser (database)',
                 'GET /api/v1/adresse/sok/db?q={query}' => 'Søk adresser i lokal database (alias)',
-                'GET /api/v1/adresse/kommune/{kommunenummer}?limit={number}' => 'Hent adresser i kommune'
+                'GET /api/v1/adresse/kommune/{kommunenummer}?limit={number}' => 'Hent adresser i kommune',
+                'GET /api/v1/adresse/kommune/{kommunenummer}/{bygningsnummer}?limit={number}' => 'Hent adresser i kommune for bygningsnummer'
             ],
             'kommune' => [
                 'GET /api/v1/kommune/{id}' => 'Hent kommune på kommunenummer',
@@ -183,6 +184,27 @@ class MatrikkelApiController extends AbstractController
             $addresses = $this->adresseRepository->findByKommunenummer($kommunenummer, $limit);
             return $this->jsonResponse([
                 'kommunenummer' => $kommunenummer,
+                'addresses' => $addresses,
+                'count' => count($addresses)
+            ]);
+        } catch (\Exception $e) {
+            return $this->jsonResponse(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Hent adresser i kommune filtrert på bygningsnummer
+     */
+    #[Route('/adresse/kommune/{kommunenummer}/{bygningsnummer}', name: 'adresse_kommune_bygning', methods: ['GET'], requirements: ['kommunenummer' => '\d+', 'bygningsnummer' => '\d+'])]
+    public function getAddressesByKommuneAndBygning(int $kommunenummer, int $bygningsnummer, Request $request): JsonResponse
+    {
+        $limit = (int) $request->query->get('limit', 1000);
+
+        try {
+            $addresses = $this->adresseRepository->findByKommunenummerAndBygningsnummer($kommunenummer, $bygningsnummer, $limit);
+            return $this->jsonResponse([
+                'kommunenummer' => $kommunenummer,
+                'bygningsnummer' => $bygningsnummer,
                 'addresses' => $addresses,
                 'count' => count($addresses)
             ]);
