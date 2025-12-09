@@ -273,6 +273,7 @@ matrikkel_bygninger ||--o{ matrikkel_bygning_matrikkelenhet : "located on"
 matrikkel_matrikkelenheter ||--o{ matrikkel_bygning_matrikkelenhet : "has buildings"
 matrikkel_bygninger ||--o{ matrikkel_bruksenheter : "contains"
 matrikkel_matrikkelenheter ||--o{ matrikkel_bruksenheter : "belongs to"
+matrikkel_adresser ||--o{ matrikkel_bruksenheter : "has units"
 
 ' Address relationships
 matrikkel_veger ||--o{ matrikkel_vegadresser : "has addresses"

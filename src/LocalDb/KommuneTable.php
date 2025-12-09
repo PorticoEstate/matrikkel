@@ -19,9 +19,10 @@ class KommuneTable extends AbstractTable
      * Insert en kommune-rad fra Matrikkel API
      * 
      * @param object $kommune Kommune-objektet fra SOAP API
+     * @param string|null $fylkesnavn Navn på fylket (hentet separat)
      * @return void
      */
-    public function insertRow(object $kommune): void
+    public function insertRow(object $kommune, ?string $fylkesnavn = null): void
     {
         // Extract koordinatsystem kode
         $koordinatsystemKode = null;
@@ -47,7 +48,7 @@ class KommuneTable extends AbstractTable
             'kommunenummer' => (int) $this->extractKommunenummer($kommune),
             'kommunenavn' => $kommune->kommunenavn ?? null,
             'fylkesnummer' => $this->extractFylkesnummer($kommune),
-            'fylkesnavn' => $this->extractFylkesnavn($kommune),
+            'fylkesnavn' => $fylkesnavn ?? $this->extractFylkesnavn($kommune),
             'gyldig_til_dato' => $this->extractDate($kommune->gyldigTilDato ?? null),
             'koordinatsystem_kode' => $koordinatsystemKode,
             'eksklusiv_bruker' => $kommune->eksklusivBruker ?? null,

@@ -232,12 +232,16 @@ class BruksenhetImportService
             $antallBad = $bruksenhet->antallBad ?? null;
             $antallWC = $bruksenhet->antallWC ?? null;
             $bruksareal = $bruksenhet->bruksareal ?? null;
+            $bygningId = isset($bruksenhet->byggId) && isset($bruksenhet->byggId->value)
+                ? $bruksenhet->byggId->value
+                : null;
             
-            // Insert or update bruksenhet (bygning_id removed - use junction table instead)
+            // Insert or update bruksenhet
             $stmt = $this->db->prepare("
                 INSERT INTO matrikkel_bruksenheter (
                     bruksenhet_id,
                     matrikkelenhet_id,
+                    bygning_id,
                     lopenummer,
                     uuid,
                     bruksenhettype_kode_id,
@@ -253,9 +257,10 @@ class BruksenhetImportService
                     sist_lastet_ned,
                     opprettet,
                     oppdatert
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (bruksenhet_id) DO UPDATE SET
                     matrikkelenhet_id = EXCLUDED.matrikkelenhet_id,
+                    bygning_id = EXCLUDED.bygning_id,
                     lopenummer = EXCLUDED.lopenummer,
                     uuid = EXCLUDED.uuid,
                     bruksenhettype_kode_id = EXCLUDED.bruksenhettype_kode_id,
@@ -275,6 +280,7 @@ class BruksenhetImportService
             $stmt->execute([
                 $bruksenhetId,
                 $matrikkelenhetId,
+                $bygningId,
                 $lopenummer,
                 $uuid,
                 $bruksenhetstypeKodeId,

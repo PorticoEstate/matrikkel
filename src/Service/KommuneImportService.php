@@ -13,6 +13,8 @@ namespace Iaasen\Matrikkel\Service;
 
 use Iaasen\Matrikkel\Client\NedlastningClient;
 use Iaasen\Matrikkel\Client\KommuneClient;
+use Iaasen\Matrikkel\Client\StoreClient;
+use Iaasen\Matrikkel\Client\FylkeId;
 use Iaasen\Matrikkel\LocalDb\KommuneTable;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -21,6 +23,7 @@ class KommuneImportService
     public function __construct(
         private NedlastningClient $nedlastningClient,
         private KommuneClient $kommuneClient,
+        private StoreClient $storeClient,
         private KommuneTable $kommuneTable
     ) {}
     
@@ -46,6 +49,9 @@ class KommuneImportService
         $totalCount = 0;
         $batchCount = 0;
         
+        // Cache for fylkesnavn
+        $fylkeCache = [];
+        
         try {
             do {
                 // Hent batch med samme logikk som TestNedlastningCommand
@@ -64,7 +70,33 @@ class KommuneImportService
                 
                 // Lagre objekter til database
                 foreach ($batch as $kommune) {
-                    $this->kommuneTable->insertRow($kommune);
+                    // Hent fylkesnavn
+                    $fylkesnavn = null;
+                    if (isset($kommune->fylkeId)) {
+                        $fylkeId = is_object($kommune->fylkeId) ? $kommune->fylkeId->value : $kommune->fylkeId;
+                        
+                        if (isset($fylkeCache[$fylkeId])) {
+                            $fylkesnavn = $fylkeCache[$fylkeId];
+                        } else {
+                            try {
+                                $fylkeObjects = $this->storeClient->getObjects([new FylkeId($fylkeId)]);
+                                if (!empty($fylkeObjects)) {
+                                    $fylke = $fylkeObjects[0];
+                                    $fylkesnavn = $fylke->fylkesnavn ?? null;
+                                    if (!$fylkesnavn && $io) {
+                                        $io->warning("Fant ikke fylkesnavn for fylkeId: $fylkeId");
+                                    }
+                                    $fylkeCache[$fylkeId] = $fylkesnavn;
+                                }
+                            } catch (\Exception $e) {
+                                if ($io) {
+                                    $io->warning("Feil ved henting av fylke $fylkeId: " . $e->getMessage());
+                                }
+                            }
+                        }
+                    }
+
+                    $this->kommuneTable->insertRow($kommune, $fylkesnavn);
                     $lastId = $kommune->id->value;
                     $totalCount++;
                     
@@ -186,10 +218,31 @@ class KommuneImportService
             
             $kommunenavn = $targetKommune->kommunenavn ?? 'Ukjent';
             $io->text("Fant kommune: $kommunenavn");
+            
+            // Hent fylkesnavn
+            $fylkesnavn = null;
+            if (isset($targetKommune->fylkeId)) {
+                $fylkeId = is_object($targetKommune->fylkeId) ? $targetKommune->fylkeId->value : $targetKommune->fylkeId;
+                try {
+                    $fylkeObjects = $this->storeClient->getObjects([new FylkeId($fylkeId)]);
+                    if (!empty($fylkeObjects)) {
+                        $fylke = $fylkeObjects[0];
+                        $fylkesnavn = $fylke->fylkesnavn ?? null;
+                        if ($fylkesnavn) {
+                            $io->text("Fant fylkesnavn: $fylkesnavn");
+                        } else {
+                            $io->warning("Fant ikke fylkesnavn for fylkeId: $fylkeId");
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $io->warning("Feil ved henting av fylke $fylkeId: " . $e->getMessage());
+                }
+            }
+
             $io->text("Lagrer til database...");
             
             // Save to database using KommuneTable
-            $this->kommuneTable->insertRow($targetKommune);
+            $this->kommuneTable->insertRow($targetKommune, $fylkesnavn);
             $this->kommuneTable->flush();
             
             $io->success("✓ Kommune $kommunenummer ($kommunenavn) importert");

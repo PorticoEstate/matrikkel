@@ -4,8 +4,8 @@
  * 
  * Imports filtered data based on ownership:
  * 1. Veger (bulk download - entire kommune)
- * 2. Bruksenheter (API-filtered by matrikkelenheter)
- * 3. Bygninger (bulk download with client-side filter)
+ * 2. Bygninger (bulk download with client-side filter)
+ * 3. Bruksenheter (API-filtered by matrikkelenheter)
  * 4. Adresser (API-filtered by matrikkelenheter)
  * 
  * MUST run Phase 1 first to have matrikkelenheter and personer!
@@ -114,8 +114,8 @@ matrikkelenheter that exist in the database.
 
 <comment>Import Strategy:</comment>
   1. <fg=cyan>Veger</fg=cyan>: Bulk download (entire kommune) - needed for adresser
-  2. <fg=cyan>Bruksenheter</fg=cyan>: API-filtered (two-step pattern)
-  3. <fg=cyan>Bygninger</fg=cyan>: Bulk download + client-side filter
+  2. <fg=cyan>Bygninger</fg=cyan>: Bulk download + client-side filter
+  3. <fg=cyan>Bruksenheter</fg=cyan>: API-filtered (two-step pattern)
   4. <fg=cyan>Adresser</fg=cyan>: API-filtered (two-step pattern)
 
 <comment>Examples:</comment>
@@ -200,17 +200,8 @@ HELP
             $vegCount = $this->vegImportService->importVegerForKommune($kommunenummer);
             $io->success(sprintf('Imported veger: %d', $vegCount));
             
-            // Step 3: Import bruksenheter (API-filtered)
-            $io->section('Step 3/5: Importing bruksenheter (API-filtered)');
-            $bruksenhetCount = $this->bruksenhetImportService->importBruksenheterForMatrikkelenheter(
-                $io,
-                $kommunenummer,
-                $filteredMatrikkelenheter,
-                $batchSize
-            );
-            
-            // Step 4: Import bygninger (API-filtered)
-            $io->section('Step 4/5: Importing bygninger (API-filtered)');
+            // Step 3: Import bygninger (API-filtered)
+            $io->section('Step 3/5: Importing bygninger (API-filtered)');
             $result = $this->bygningImportService->importBygningerForMatrikkelenheter(
                 $filteredMatrikkelenheter,
                 $io
@@ -220,6 +211,15 @@ HELP
                 $result['bygninger'],
                 $result['relations']
             ));
+
+            // Step 4: Import bruksenheter (API-filtered)
+            $io->section('Step 4/5: Importing bruksenheter (API-filtered)');
+            $bruksenhetCount = $this->bruksenhetImportService->importBruksenheterForMatrikkelenheter(
+                $io,
+                $kommunenummer,
+                $filteredMatrikkelenheter,
+                $batchSize
+            );
             
             // Step 5: Import adresser (API-filtered)
             $io->section('Step 5/5: Importing adresser (API-filtered)');

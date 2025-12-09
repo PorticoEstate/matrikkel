@@ -101,25 +101,23 @@ class AdresseRepository extends DatabaseRepository
     public function findByKommunenummer(int $kommunenummer, int $limit = 1000): array
     {
         $sql = "
-            SELECT DISTINCT ON (b.bygning_id)
+            SELECT DISTINCT b.matrikkel_bygning_nummer as bygningsnummer,
                 a.adresse_id,
                 v.adressenavn as gatenavn,
                 va.nummer as husnummer,
                 va.bokstav,
-                b.matrikkel_bygning_nummer as bygningsnummer,
                 b.lopenummer
             FROM matrikkel_bygninger b
-            JOIN matrikkel_bygning_matrikkelenhet bme ON b.bygning_id = bme.bygning_id
-            JOIN matrikkel_matrikkelenheter me ON bme.matrikkelenhet_id = me.matrikkelenhet_id
-            JOIN matrikkel_adresser a ON me.matrikkelenhet_id = a.matrikkelenhet_id
+            JOIN matrikkel_bruksenheter bu ON b.bygning_id = bu.bygning_id
+            JOIN matrikkel_adresser a ON bu.adresse_id = a.adresse_id
             JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
             JOIN matrikkel_veger v ON va.veg_id = v.veg_id
             
             WHERE 
                 a.adressetype = 'VEGADRESSE'
-                AND me.kommunenummer = :kommunenummer
+                AND v.kommune_id = :kommunenummer
             ORDER BY 
-                b.bygning_id,
+                b.matrikkel_bygning_nummer,
                 va.nummer,
                 va.bokstav NULLS FIRST
             LIMIT :limit
@@ -138,26 +136,24 @@ class AdresseRepository extends DatabaseRepository
     public function findByKommunenummerAndBygningsnummer(int $kommunenummer, int $bygningsnummer, int $limit = 1000): array
     {
         $sql = "
-            SELECT DISTINCT ON (b.bygning_id)
+            SELECT DISTINCT 
                 a.adresse_id,
                 v.adressenavn as gatenavn,
                 va.nummer as husnummer,
                 va.bokstav,
-                b.matrikkel_bygning_nummer as bygningsnummer,
-                b.lopenummer
+                b.matrikkel_bygning_nummer as bygningsnummer
             FROM matrikkel_bygninger b
-            JOIN matrikkel_bygning_matrikkelenhet bme ON b.bygning_id = bme.bygning_id
-            JOIN matrikkel_matrikkelenheter me ON bme.matrikkelenhet_id = me.matrikkelenhet_id
-            JOIN matrikkel_adresser a ON me.matrikkelenhet_id = a.matrikkelenhet_id
+            JOIN matrikkel_bruksenheter bu ON b.bygning_id = bu.bygning_id
+            JOIN matrikkel_adresser a ON bu.adresse_id = a.adresse_id
             JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
             JOIN matrikkel_veger v ON va.veg_id = v.veg_id
             
             WHERE 
                 a.adressetype = 'VEGADRESSE'
                 AND b.matrikkel_bygning_nummer = :bygningsnummer
-                AND me.kommunenummer = :kommunenummer
+                AND v.kommune_id = :kommunenummer
             ORDER BY 
-                b.bygning_id,
+ --               b.bygning_id,
                 va.nummer,
                 va.bokstav NULLS FIRST
             LIMIT :limit

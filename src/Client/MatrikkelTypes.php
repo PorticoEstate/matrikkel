@@ -87,6 +87,22 @@ class KommuneId extends MatrikkelBubbleId
 }
 
 /**
+ * FylkeId - specific type for Fylke objects
+ */
+class FylkeId extends MatrikkelBubbleId
+{
+}
+
+/**
+ * Fylke - Domain object for Fylke
+ */
+class Fylke
+{
+    public $fylkesnavn;
+    public $fylkesnummer;
+}
+
+/**
  * PersonIdent - Base class for person identification
  */
 class PersonIdent
