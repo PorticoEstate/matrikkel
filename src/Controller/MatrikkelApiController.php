@@ -51,7 +51,6 @@ class MatrikkelApiController extends AbstractController
             ],
             'kommune' => [
                 'GET /api/v1/kommune/{id}' => 'Hent kommune på kommunenummer',
-                'GET /api/v1/kommune/nummer/{nummer}' => 'Hent kommune på kommunenummer (alias)',
                 'GET /api/v1/kommune?limit={number}' => 'Hent alle kommuner'
             ],
             'bruksenhet' => [
@@ -232,15 +231,6 @@ class MatrikkelApiController extends AbstractController
         }
     }
 
-    /**
-     * Hent kommune på kommunenummer (alias)
-     */
-    #[Route('/kommune/nummer/{nummer}', name: 'kommune_etter_nummer', methods: ['GET'], requirements: ['nummer' => '\d+'])]
-    public function getMunicipalityByNumber(int $nummer): JsonResponse
-    {
-        // Same as getMunicipality since kommunenummer is the ID
-        return $this->getMunicipality($nummer);
-    }
 
     /**
      * Hent alle kommuner
