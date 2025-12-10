@@ -122,6 +122,14 @@ services:
             $dbUsername: '%env(DB_USERNAME)%'
             $dbPassword: '%env(DB_PASSWORD)%'
 
+    Iaasen\Matrikkel\LocalDb\VegRepository:
+        arguments:
+            $dbHost: '%env(DB_HOST)%'
+            $dbPort: '%env(DB_PORT)%'
+            $dbName: '%env(DB_NAME)%'
+            $dbUsername: '%env(DB_USERNAME)%'
+            $dbPassword: '%env(DB_PASSWORD)%'
+
     # PDO service for direct database access
     PDO:
         class: PDO

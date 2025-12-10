@@ -15,6 +15,7 @@ use Iaasen\Matrikkel\LocalDb\BygningRepository;
 use Iaasen\Matrikkel\LocalDb\KommuneRepository;
 use Iaasen\Matrikkel\LocalDb\MatrikkelenhetRepository;
 use Iaasen\Matrikkel\LocalDb\PersonRepository;
+use Iaasen\Matrikkel\LocalDb\VegRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,7 +30,8 @@ class MatrikkelApiController extends AbstractController
         private BygningRepository $bygningRepository,
         private KommuneRepository $kommuneRepository,
         private MatrikkelenhetRepository $matrikkelenhetRepository,
-        private PersonRepository $personRepository
+        private PersonRepository $personRepository,
+        private VegRepository $vegRepository
     ) {}
 
     /**
@@ -52,6 +54,10 @@ class MatrikkelApiController extends AbstractController
             'kommune' => [
                 'GET /api/v1/kommune/{id}' => 'Hent kommune på kommunenummer',
                 'GET /api/v1/kommune?limit={number}' => 'Hent alle kommuner'
+            ],
+            'gate' => [
+                'GET /api/v1/gate/{kommunenr}' => 'Hent alle gater i kommune',
+                'GET /api/v1/gate/{kommunenr}/{adressekode}' => 'Hent spesifikk gate'
             ],
             'bruksenhet' => [
                 'GET /api/v1/bruksenhet/{id}' => 'Hent bruksenhet på ID',
@@ -447,6 +453,29 @@ class MatrikkelApiController extends AbstractController
             'tilgjengelige_endepunkter' => $this->getAvailableEndpoints(),
             'hint' => 'Besøk /api/v1/endpoints for full API-dokumentasjon'
         ], 404);
+    }
+
+    /**
+     * Get all streets in a municipality
+     */
+    #[Route('/gate/{kommunenr}', name: 'gate_kommune', methods: ['GET'])]
+    public function getVegerByKommune(int $kommunenr): JsonResponse
+    {
+        $veger = $this->vegRepository->findByKommunenummer($kommunenr);
+        return $this->jsonResponse($veger);
+    }
+
+    /**
+     * Get a specific street by municipality and street code
+     */
+    #[Route('/gate/{kommunenr}/{adressekode}', name: 'gate_detalj', methods: ['GET'])]
+    public function getVeg(int $kommunenr, int $adressekode): JsonResponse
+    {
+        $veg = $this->vegRepository->findByKommunenummerAndAdressekode($kommunenr, $adressekode);
+        if (!$veg) {
+            return $this->jsonResponse(null, 404);
+        }
+        return $this->jsonResponse($veg);
     }
 
     // ==================== UTILITY METHODS ====================
