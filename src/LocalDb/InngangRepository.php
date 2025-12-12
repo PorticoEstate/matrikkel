@@ -33,7 +33,7 @@ class InngangRepository extends DatabaseRepository
     /**
     * Find existing or create new entrance for a building/address combination
     */
-    public function findOrCreate(int $bygningId, ?int $vegId, int $husnummer, ?string $bokstav): array
+    public function findOrCreate(int $bygningId, ?int $vegId, int $husnummer, ?string $bokstav, ?int $adressekode = null): array
     {
         $existing = $this->fetchOne(
             "SELECT * FROM matrikkel_innganger WHERE bygning_id = :bygning_id AND veg_id IS NOT DISTINCT FROM :veg_id AND husnummer = :husnummer AND bokstav IS NOT DISTINCT FROM :bokstav",
@@ -46,17 +46,29 @@ class InngangRepository extends DatabaseRepository
         );
 
         if ($existing) {
+            // Backfill adressekode when it arrives later (legacy rows may have NULL)
+            if ($adressekode !== null && $existing['adressekode'] !== $adressekode) {
+                $this->execute(
+                    "UPDATE matrikkel_innganger SET adressekode = :adressekode WHERE inngang_id = :inngang_id",
+                    [
+                        'adressekode' => $adressekode,
+                        'inngang_id' => $existing['inngang_id'],
+                    ]
+                );
+                $existing['adressekode'] = $adressekode;
+            }
             return $existing;
         }
 
         $this->execute(
-            "INSERT INTO matrikkel_innganger (bygning_id, veg_id, husnummer, bokstav, lopenummer_i_bygg, lokasjonskode_inngang)
-             VALUES (:bygning_id, :veg_id, :husnummer, :bokstav, 0, '')",
+            "INSERT INTO matrikkel_innganger (bygning_id, veg_id, husnummer, bokstav, adressekode, lopenummer_i_bygg, lokasjonskode_inngang)
+             VALUES (:bygning_id, :veg_id, :husnummer, :bokstav, :adressekode, 0, '')",
             [
                 'bygning_id' => $bygningId,
                 'veg_id' => $vegId,
                 'husnummer' => $husnummer,
                 'bokstav' => $bokstav,
+                'adressekode' => $adressekode,
             ]
         );
 

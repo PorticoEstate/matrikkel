@@ -61,43 +61,72 @@ class PorticoExportService
      * @param string|null $organisasjonsnummer (optional filter on owner)
      * @return array
      */
-    public function export(int $kommune = null, string $organisasjonsnummer = null): array
+    public function export(int| null $kommune = null, string | null $organisasjonsnummer = null): array
     {
-        // Fetch matrikkelenheter (with optional filters)
-        $sql = 'SELECT DISTINCT me.* FROM matrikkel_matrikkelenheter me';
-        $params = [];
-
-        // Add kommune filter
+        // Fetch matrikkelenheter with kommune filter
         if ($kommune) {
-            $sql .= ' WHERE me.kommunenummer = ?';
-            $params[] = $kommune;
+            $matrikkelenheter = $this->matrikkelenhetRepository->findByKommunenummer($kommune, 10000);
+        } else {
+            // If no kommune specified, use search with empty criteria to get all
+            $matrikkelenheter = $this->matrikkelenhetRepository->search([], 10000);
         }
 
-        // Add organisasjonsnummer filter (via eierforhold join)
-        if ($organisasjonsnummer) {
-            $sql .= (strpos($sql, 'WHERE') ? ' AND' : ' WHERE') . ' EXISTS (
-                SELECT 1 FROM matrikkel_eierforhold eo
-                JOIN matrikkel_juridiske_personer jp ON eo.juridisk_person_entity_id = jp.id
-                WHERE eo.matrikkelenhet_id = me.matrikkelenhet_id
-                AND jp.organisasjonsnummer = ?
-            )';
-            $params[] = $organisasjonsnummer;
+        // Filter by organisasjonsnummer if specified
+        if ($organisasjonsnummer && !empty($matrikkelenheter)) {
+            $matrikkelenheter = $this->filterByOrganisasjonsnummer($matrikkelenheter, $organisasjonsnummer);
         }
 
-        $sql .= ' ORDER BY me.matrikkelenhet_id ASC';
-        
-        $matrikkelenheter = $this->matrikkelenhetRepository->fetchAll($sql, $params);
-
-        // Build hierarchy
+        // Build hierarchy and filter out properties without buildings
         $eiendommer = [];
         foreach ($matrikkelenheter as $matr) {
-            $eiendommer[] = $this->buildEiendomHierarchy($matr);
+            $eiendom = $this->buildEiendomHierarchy($matr);
+            
+            // Only include eiendommer that have buildings
+            if (!empty($eiendom['bygg'])) {
+                $eiendommer[] = $eiendom;
+            }
         }
 
         return [
             'eiendommer' => $eiendommer,
             'count' => count($eiendommer),
         ];
+    }
+
+    /**
+     * Filter matrikkelenheter by organisasjonsnummer (owner)
+     * 
+     * @param array $matrikkelenheter
+     * @param string $organisasjonsnummer
+     * @return array
+     */
+    private function filterByOrganisasjonsnummer(array $matrikkelenheter, string $organisasjonsnummer): array
+    {
+        $filtered = [];
+        
+        foreach ($matrikkelenheter as $matr) {
+            $matrikkelId = (int)$matr['matrikkelenhet_id'];
+            // Check if this matrikkelenhet has ownership by specified organisasjonsnummer
+            $eierforhold = $this->matrikkelenhetRepository->findWithEierforhold($matrikkelId);
+            
+            // findWithEierforhold returns array with eierforhold data
+            // Check if any eierforhold matches the organisasjonsnummer
+            $hasOwner = false;
+            if (isset($eierforhold['eierforhold']) && is_array($eierforhold['eierforhold'])) {
+                foreach ($eierforhold['eierforhold'] as $eierfh) {
+                    if (isset($eierfh['organisasjonsnummer']) && $eierfh['organisasjonsnummer'] === $organisasjonsnummer) {
+                        $hasOwner = true;
+                        break;
+                    }
+                }
+            }
+            
+            if ($hasOwner) {
+                $filtered[] = $matr;
+            }
+        }
+        
+        return $filtered;
     }
 
     /**
@@ -144,6 +173,11 @@ class PorticoExportService
             'matrikkel_bygning_nummer' => $bygning['matrikkel_bygning_nummer'] ?? null,
             'lopenummer_i_eiendom' => (int)$bygning['lopenummer_i_eiendom'] ?? null,
             'bygningstype_kode_id' => $bygning['bygningstype_kode_id'] ?? null,
+			'antall_etasjer' => $bygning['antall_etasjer'] ?? null,
+			'bruksareal' => $bygning['bruksareal'] ?? null,
+			'byggeaar' => $bygning['byggeaar'] ?? null,
+			'antall_etasjer' => $bygning['antall_etasjer'] ?? null,
+			'bygningstype_kode_id' => $bygning['bygningstype_kode_id'] ?? null,
             'innganger' => $innganger,
         ];
     }
@@ -168,6 +202,7 @@ class PorticoExportService
             'husnummer' => (int)$inngang['husnummer'] ?? null,
             'bokstav' => $inngang['bokstav'] ?? null,
             'veg_id' => $inngang['veg_id'] ?? null,
+            'adressekode' => $inngang['adressekode'] ?? null,
             'lopenummer_i_bygg' => (int)$inngang['lopenummer_i_bygg'] ?? null,
             'bruksenheter' => $bruksenheter,
         ];

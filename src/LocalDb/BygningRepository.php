@@ -111,7 +111,7 @@ class BygningRepository extends DatabaseRepository
             SELECT b.*
             FROM matrikkel_bygninger b
             INNER JOIN matrikkel_bygning_matrikkelenhet bm ON b.bygning_id = bm.bygning_id
-            WHERE bm.matrikkelenhet_id = :matrikkelenhet_id
+            WHERE b.bygningsstatus_kode_id != 9 AND bm.matrikkelenhet_id = :matrikkelenhet_id
             ORDER BY b.bygning_id ASC
         ";
 

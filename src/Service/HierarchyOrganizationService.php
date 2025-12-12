@@ -7,6 +7,7 @@ use Iaasen\Matrikkel\LocalDb\BruksenhetRepository;
 use Iaasen\Matrikkel\LocalDb\BygningRepository;
 use Iaasen\Matrikkel\LocalDb\InngangRepository;
 use Iaasen\Matrikkel\LocalDb\MatrikkelenhetRepository;
+use Iaasen\Matrikkel\LocalDb\VegRepository;
 
 /**
  * Builds and stores Portico location codes for Eiendom → Bygg → Inngang → Bruksenhet
@@ -18,7 +19,8 @@ class HierarchyOrganizationService
         private BygningRepository $bygningRepository,
         private InngangRepository $inngangRepository,
         private BruksenhetRepository $bruksenhetRepository,
-        private AdresseRepository $adresseRepository
+        private AdresseRepository $adresseRepository,
+        private VegRepository $vegRepository
     ) {
     }
 
@@ -97,7 +99,14 @@ class HierarchyOrganizationService
             $husnummer = $group['meta']['husnummer'];
             $bokstav = $group['meta']['bokstav'];
 
-            $inngang = $this->inngangRepository->findOrCreate($bygningId, $vegId !== null ? (int) $vegId : null, (int) $husnummer, $bokstav);
+            // Lookup adressekode from veger if veg_id exists
+            $adressekode = null;
+            if ($vegId !== null) {
+                $veg = $this->vegRepository->findById((int) $vegId);
+                $adressekode = $veg['adressekode'] ?? null;
+            }
+
+            $inngang = $this->inngangRepository->findOrCreate($bygningId, $vegId !== null ? (int) $vegId : null, (int) $husnummer, $bokstav, $adressekode);
 
             $this->inngangRepository->updateLopenummer((int) $inngang['inngang_id'], $entranceSeq);
             $inngangKode = $this->formatInngangKode($byggKode, $entranceSeq);
