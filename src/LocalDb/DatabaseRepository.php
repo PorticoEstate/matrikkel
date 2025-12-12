@@ -68,4 +68,13 @@ abstract class DatabaseRepository
         $stmt->execute($params);
         return (int) $stmt->fetchColumn();
     }
+
+    /**
+     * Execute a write/update/delete statement
+     */
+    protected function execute(string $sql, array $params = []): void
+    {
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+    }
 }

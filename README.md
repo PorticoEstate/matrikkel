@@ -138,6 +138,25 @@ php bin/console matrikkel:debug-matrikkelenhet
 php bin/console matrikkel:test-nedlastning
 ```
 
+**Portico hierarchy organization:**
+
+```bash
+# Organize 4-level location hierarchy for a municipality
+php bin/console matrikkel:organize-hierarchy --kommune=4627
+
+# Organize specific matrikkelenhet
+php bin/console matrikkel:organize-hierarchy --kommune=4627 --matrikkelenhet=12345
+
+# Force re-organization (even if already organized)
+php bin/console matrikkel:organize-hierarchy --kommune=4627 --force
+```
+
+This command assigns deterministic location codes to the 4-level hierarchy:
+- **Eiendom** (Property) - Base code (e.g., `5000`)
+- **Bygg** (Building) - 2-digit suffix (e.g., `5000-01`, `5000-02`)
+- **Inngang** (Entrance) - 2-digit suffix (e.g., `5000-01-01`, `5000-01-02`)
+- **Bruksenhet** (Unit) - 3-digit suffix (e.g., `5000-01-01-001`, `5000-01-01-002`)
+
 **Note**: For searching individual addresses, property units, cadastral units, municipalities, or code lists, use the REST API endpoints below instead of console commands.
 
 ### REST API Endpoints
@@ -177,6 +196,10 @@ GET /api/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}/{snr} # With section
 GET /api/codelist           # Get all code lists
 GET /api/codelist/{id}      # Get specific code list with codes
 
+# Portico Export (4-level hierarchy)
+GET /api/portico/export?kommune={kommunenummer}                      # Export all properties in municipality
+GET /api/portico/export?kommune={kommunenummer}&organisasjonsnummer={orgnr}  # Filter by owner
+
 # General Search
 GET /api/search?q={query}&source=api&limit={number}&offset={start}    # Search via Matrikkel API (pagination support)
 GET /api/search?q={query}&source=db     # Search via local database
@@ -200,6 +223,12 @@ curl "http://localhost:8083/api/search?q=oslo&source=api&limit=50&offset=100"  #
 
 # Search in local database
 curl "http://localhost:8083/api/search?q=Oslo&source=db"
+
+# Export Portico hierarchy for a municipality
+curl "http://localhost:8083/api/portico/export?kommune=4627"
+
+# Export Portico hierarchy filtered by owner
+curl "http://localhost:8083/api/portico/export?kommune=4627&organisasjonsnummer=964338442"
 ```
 ```
 
@@ -408,6 +437,78 @@ docker compose exec app php bin/console cache:clear
 
 The current implementation includes a basic stub for coordinate transformations (UTM ↔ Lat/Long). For production use requiring precise coordinate transformations, consider implementing a proper coordinate transformation library or service.
 
+## 🧪 Testing
+
+The project includes comprehensive test coverage:
+
+### Running Tests
+
+**Run all tests:**
+
+```bash
+php bin/phpunit
+
+# With Docker
+docker compose exec app php bin/phpunit
+```
+
+**Run specific test suites:**
+
+```bash
+# Unit tests only
+php bin/phpunit tests/Unit/
+
+# Integration tests only
+php bin/phpunit tests/Integration/
+
+# Console command tests
+php bin/phpunit tests/Integration/Console/
+
+# REST API tests
+php bin/phpunit tests/Integration/Api/
+```
+
+**Run specific test file:**
+
+```bash
+php bin/phpunit tests/Unit/Service/HierarchyOrganizationServiceTest.php
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- **Unit Tests** (8 tests) - Code formatting, sorting algorithms, validation logic
+- **Console Integration Tests** (8 tests) - CLI command functionality
+- **API Integration Tests** (5 tests) - REST endpoint validation
+
+**Total: 21 tests** covering critical functionality
+
+### Test Structure
+
+```text
+tests/
+├── Unit/
+│   └── Service/
+│       └── HierarchyOrganizationServiceTest.php
+├── Integration/
+│   ├── Console/
+│   │   └── OrganizeHierarchyCommandTest.php
+│   └── Api/
+│       └── PorticoExportControllerTest.php
+└── bootstrap.php
+```
+
+### Coverage Reports
+
+Generate HTML coverage report:
+
+```bash
+php bin/phpunit --coverage-html coverage/
+```
+
+View the report by opening `coverage/index.html` in your browser.
+
 ## 📝 Development
 
 ### Project Structure
@@ -416,6 +517,7 @@ The current implementation includes a basic stub for coordinate transformations 
 src/
 ├── Client/          # SOAP client implementations
 ├── Console/         # Symfony console commands  
+├── Controller/      # REST API controllers
 ├── Entity/          # Data entities
 ├── LocalDb/         # Local database services
 └── Service/         # Business logic services

@@ -103,6 +103,56 @@ class BygningRepository extends DatabaseRepository
     }
 
     /**
+     * Get bygninger for a matrikkelenhet ordered by bygning_id (for stable numbering)
+     */
+    public function getBygningerForEiendom(int $matrikkelenhetId): array
+    {
+        $sql = "
+            SELECT b.*
+            FROM matrikkel_bygninger b
+            INNER JOIN matrikkel_bygning_matrikkelenhet bm ON b.bygning_id = bm.bygning_id
+            WHERE bm.matrikkelenhet_id = :matrikkelenhet_id
+            ORDER BY b.bygning_id ASC
+        ";
+
+        return $this->fetchAll($sql, ['matrikkelenhet_id' => $matrikkelenhetId]);
+    }
+
+    /**
+     * Update løpenummer innen eiendom
+     */
+    public function updateLopenummerIEiendom(int $bygningId, int $lopenummer): void
+    {
+        $sql = "
+            UPDATE matrikkel_bygninger
+            SET lopenummer_i_eiendom = :lopenummer
+            WHERE bygning_id = :bygning_id
+        ";
+
+        $this->execute($sql, [
+            'bygning_id' => $bygningId,
+            'lopenummer' => $lopenummer,
+        ]);
+    }
+
+    /**
+     * Update lokasjonskode for bygg
+     */
+    public function updateLokasjonskode(int $bygningId, string $lokasjonskode): void
+    {
+        $sql = "
+            UPDATE matrikkel_bygninger
+            SET lokasjonskode_bygg = :lokasjonskode
+            WHERE bygning_id = :bygning_id
+        ";
+
+        $this->execute($sql, [
+            'bygning_id' => $bygningId,
+            'lokasjonskode' => $lokasjonskode,
+        ]);
+    }
+
+    /**
      * Get bygninger with statistics
      */
     public function getStatistics(): array

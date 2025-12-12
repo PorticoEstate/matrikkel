@@ -24,3 +24,7 @@ docker-compose.override.yml
 ###< docker ###
 
 .fake
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###

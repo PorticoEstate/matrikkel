@@ -180,4 +180,21 @@ class MatrikkelenhetRepository extends DatabaseRepository
             ['kommunenummer' => $kommunenummer]
         );
     }
+
+    /**
+     * Update lokasjonskode for eiendom
+     */
+    public function updateLokasjonskode(int $matrikkelenhetId, string $lokasjonskode): void
+    {
+        $sql = "
+            UPDATE matrikkel_matrikkelenheter
+            SET lokasjonskode_eiendom = :lokasjonskode
+            WHERE matrikkelenhet_id = :matrikkelenhet_id
+        ";
+
+        $this->execute($sql, [
+            'matrikkelenhet_id' => $matrikkelenhetId,
+            'lokasjonskode' => $lokasjonskode,
+        ]);
+    }
 }

@@ -47,6 +47,30 @@ class BruksenhetRepository extends DatabaseRepository
     }
 
     /**
+     * Find bruksenheter by bygning ID including address info (for entrance grouping)
+     */
+    public function findByBygningIdWithAdresse(int $bygningId): array
+    {
+        $sql = "
+            SELECT 
+                br.*, 
+                va.veg_id,
+                va.nummer AS husnummer,
+                va.bokstav,
+                v.adressenavn,
+                v.kort_adressenavn
+            FROM matrikkel_bruksenheter br
+            LEFT JOIN matrikkel_adresser a ON br.adresse_id = a.adresse_id
+            LEFT JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
+            LEFT JOIN matrikkel_veger v ON va.veg_id = v.veg_id
+            WHERE br.bygning_id = :bygning_id
+            ORDER BY br.etasjenummer NULLS FIRST, br.lopenummer, br.bruksenhet_id
+        ";
+
+        return $this->fetchAll($sql, ['bygning_id' => $bygningId]);
+    }
+
+    /**
      * Find bruksenheter by matrikkelenhet ID
      */
     public function findByMatrikkelenhetId(int $matrikkelenhetId): array
@@ -131,6 +155,72 @@ class BruksenhetRepository extends DatabaseRepository
         $params['limit'] = $limit;
 
         return $this->fetchAll($sql, $params);
+    }
+
+    /**
+     * Fetch bruksenheter for en inngang, sortert for stabil løpenummerering
+     */
+    public function findByInngangId(int $inngangId): array
+    {
+        $sql = "
+            SELECT br.*
+            FROM matrikkel_bruksenheter br
+            WHERE br.inngang_id = :inngang_id
+            ORDER BY br.etasjenummer NULLS FIRST, br.lopenummer, br.bruksenhet_id
+        ";
+
+        return $this->fetchAll($sql, ['inngang_id' => $inngangId]);
+    }
+
+    /**
+     * Update løpenummer innen inngang
+     */
+    public function updateLopenummerIInngang(int $bruksenhetId, int $lopenummer): void
+    {
+        $sql = "
+            UPDATE matrikkel_bruksenheter
+            SET lopenummer_i_inngang = :lopenummer
+            WHERE bruksenhet_id = :bruksenhet_id
+        ";
+
+        $this->execute($sql, [
+            'bruksenhet_id' => $bruksenhetId,
+            'lopenummer' => $lopenummer,
+        ]);
+    }
+
+    /**
+     * Set inngang_id reference
+     */
+    public function updateInngangReference(int $bruksenhetId, ?int $inngangId): void
+    {
+        $sql = "
+            UPDATE matrikkel_bruksenheter
+            SET inngang_id = :inngang_id
+            WHERE bruksenhet_id = :bruksenhet_id
+        ";
+
+        $this->execute($sql, [
+            'bruksenhet_id' => $bruksenhetId,
+            'inngang_id' => $inngangId,
+        ]);
+    }
+
+    /**
+     * Update lokasjonskode for bruksenhet
+     */
+    public function updateLokasjonskode(int $bruksenhetId, string $lokasjonskode): void
+    {
+        $sql = "
+            UPDATE matrikkel_bruksenheter
+            SET lokasjonskode_bruksenhet = :lokasjonskode
+            WHERE bruksenhet_id = :bruksenhet_id
+        ";
+
+        $this->execute($sql, [
+            'bruksenhet_id' => $bruksenhetId,
+            'lokasjonskode' => $lokasjonskode,
+        ]);
     }
 
     /**

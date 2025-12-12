@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+         colors="true"
+         beStrictAboutOutputDuringTests="true"
+         beStrictAboutTestsThatDoNotTestAnything="true"
+         beStrictAboutTodoTestedCode="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         cacheDirectory=".phpunit.cache"
+         bootstrap="tests/bootstrap.php"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage processUncoveredFiles="true">
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+        <exclude>
+            <directory>src/Client</directory>
+            <directory>src/Entity</directory>
+            <directory>src/MatrikkelTypes.php</directory>
+        </exclude>
+        <report>
+            <html outputDirectory="coverage" lowUpperBound="50" highLowerBound="80"/>
+            <text outputFile="php://stdout" showOnlySummary="true"/>
+        </report>
+    </coverage>
+
+    <php>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="display_errors" value="On"/>
+        <ini name="display_startup_errors" value="On"/>
+        <server name="APP_ENV" value="test"/>
+        <server name="APP_DEBUG" value="1"/>
+        <server name="SHELL_VERBOSITY" value="-1"/>
+        <server name="SYMFONY_PHPUNIT_REMOVE" value="symfony/yaml"/>
+        <server name="SYMFONY_PHPUNIT_VERSION" value="11.5"/>
+        <server name="KERNEL_CLASS" value="Iaasen\Matrikkel\Kernel"/>
+        <server name="DATABASE_URL" value="postgresql://user:password@127.0.0.1:5432/matrikkel_test"/>
+    </php>
+    </php>
+</phpunit>

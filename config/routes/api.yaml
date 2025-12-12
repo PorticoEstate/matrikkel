@@ -2,3 +2,8 @@
 api:
     resource: '../../src/Controller/MatrikkelApiController.php'
     type: attribute
+
+# Portico Export API Routes
+portico:
+    resource: '../../src/Controller/PorticoExportController.php'
+    type: attribute
