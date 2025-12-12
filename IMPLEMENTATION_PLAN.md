@@ -884,17 +884,17 @@ $ psql -d matrikkel -c "SELECT COUNT(*) as total, COUNT(eier_id) as med_eier
   ```
 - [ ] Test alle REST API endpoints:
   ```bash
-  curl http://localhost:8000/api/v1/kommune
-  curl http://localhost:8000/api/v1/kommune/5001
-  curl http://localhost:8000/api/v1/matrikkelenhet?kommune=5001
-  curl http://localhost:8000/api/v1/bygning?kommune=5001
+  curl http://localhost:8000/api/kommune
+  curl http://localhost:8000/api/kommune/5001
+  curl http://localhost:8000/api/matrikkelenhet?kommune=5001
+  curl http://localhost:8000/api/bygning?kommune=5001
   # etc.
   ```
 - [ ] Test eier-filtrering:
   ```bash
   # Finn en eier-ID fra matrikkelenheter
-  curl http://localhost:8000/api/v1/matrikkelenhet?kommune=5001&eier=XXXXX
-  curl http://localhost:8000/api/v1/adresse/sok?kommune=5001&eier=XXXXX
+  curl http://localhost:8000/api/matrikkelenhet?kommune=5001&eier=XXXXX
+  curl http://localhost:8000/api/adresse/sok?kommune=5001&eier=XXXXX
   ```
 - [ ] Valider ytelseoptimalisering:
   - [ ] Sjekk query execution time

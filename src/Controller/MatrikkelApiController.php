@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/api/v1', name: 'api_')]
+#[Route('/api', name: 'api_')]
 class MatrikkelApiController extends AbstractController
 {
     public function __construct(
@@ -42,36 +42,36 @@ class MatrikkelApiController extends AbstractController
     {
         return [
             'health' => [
-                'GET /api/v1/ping' => 'API health check (database connection test)'
+                'GET /api/ping' => 'API health check (database connection test)'
             ],
             'adresse' => [
-                'GET /api/v1/adresse/{id}' => 'Hent adresse på ID',
-                'GET /api/v1/adresse/sok?q={query}&limit={number}' => 'Søk adresser (database)',
-                'GET /api/v1/adresse/sok/db?q={query}' => 'Søk adresser i lokal database (alias)',
-                'GET /api/v1/adresse/kommune/{kommunenummer}?limit={number}' => 'Hent adresser i kommune',
-                'GET /api/v1/adresse/kommune/{kommunenummer}/{bygningsnummer}?limit={number}' => 'Hent adresser i kommune for bygningsnummer'
+                'GET /api/adresse/{id}' => 'Hent adresse på ID',
+                'GET /api/adresse/sok?q={query}&limit={number}' => 'Søk adresser (database)',
+                'GET /api/adresse/sok/db?q={query}' => 'Søk adresser i lokal database (alias)',
+                'GET /api/adresse/kommune/{kommunenummer}?limit={number}' => 'Hent adresser i kommune',
+                'GET /api/adresse/kommune/{kommunenummer}/{bygningsnummer}?limit={number}' => 'Hent adresser i kommune for bygningsnummer'
             ],
             'kommune' => [
-                'GET /api/v1/kommune/{id}' => 'Hent kommune på kommunenummer',
-                'GET /api/v1/kommune?limit={number}' => 'Hent alle kommuner'
+                'GET /api/kommune/{id}' => 'Hent kommune på kommunenummer',
+                'GET /api/kommune?limit={number}' => 'Hent alle kommuner'
             ],
             'gate' => [
-                'GET /api/v1/gate/{kommunenr}' => 'Hent alle gater i kommune',
-                'GET /api/v1/gate/{kommunenr}/{adressekode}' => 'Hent spesifikk gate'
+                'GET /api/gate/{kommunenr}' => 'Hent alle gater i kommune',
+                'GET /api/gate/{kommunenr}/{adressekode}' => 'Hent spesifikk gate'
             ],
             'bruksenhet' => [
-                'GET /api/v1/bruksenhet/{id}' => 'Hent bruksenhet på ID',
-                'GET /api/v1/bruksenhet/adresse/{adresseId}' => 'Hent bruksenheter for adresse',
-                'GET /api/v1/bruksenhet/bygning/{bygningId}' => 'Hent bruksenheter for bygning'
+                'GET /api/bruksenhet/{id}' => 'Hent bruksenhet på ID',
+                'GET /api/bruksenhet/adresse/{adresseId}' => 'Hent bruksenheter for adresse',
+                'GET /api/bruksenhet/bygning/{bygningId}' => 'Hent bruksenheter for bygning'
             ],
             'matrikkelenhet' => [
-                'GET /api/v1/matrikkelenhet/{id}' => 'Hent matrikkelenhet på ID',
-                'GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}' => 'Hent matrikkelenhet på matrikkelnummer',
-                'GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}' => 'Hent matrikkelenhet med festenummer',
-                'GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}/{snr}' => 'Hent matrikkelenhet med seksjonsnummer'
+                'GET /api/matrikkelenhet/{id}' => 'Hent matrikkelenhet på ID',
+                'GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}' => 'Hent matrikkelenhet på matrikkelnummer',
+                'GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}' => 'Hent matrikkelenhet med festenummer',
+                'GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}/{snr}' => 'Hent matrikkelenhet med seksjonsnummer'
             ],
             'sok' => [
-                'GET /api/v1/sok?q={query}&limit={number}' => 'Søk i database (adresser og matrikkelenheter)'
+                'GET /api/sok?q={query}&limit={number}' => 'Søk i database (adresser og matrikkelenheter)'
             ],
             'info' => [
                 'Note' => 'All data is served from local PostgreSQL database populated by Phase1/Phase2 imports',
@@ -448,10 +448,10 @@ class MatrikkelApiController extends AbstractController
     {
         return $this->json([
             'feil' => 'Rute ikke funnet',
-            'forespurt_sti' => '/api/v1/' . $path,
+            'forespurt_sti' => '/api/' . $path,
             'melding' => 'Det forespurte API-endepunktet eksisterer ikke. Se tilgjengelige endepunkter nedenfor.',
             'tilgjengelige_endepunkter' => $this->getAvailableEndpoints(),
-            'hint' => 'Besøk /api/v1/endpoints for full API-dokumentasjon'
+            'hint' => 'Besøk /api/endpoints for full API-dokumentasjon'
         ], 404);
     }
 

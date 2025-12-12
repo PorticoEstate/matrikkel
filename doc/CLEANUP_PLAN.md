@@ -53,7 +53,7 @@ Disse ble laget før REST API var på plass. De er **redundante** fordi:
    - Fil: `AdresseCommand.php`
    - Funksjon: Søk/hent enkelt-adresser via SOAP API
    - **Erstattet av**: 
-     - REST API: `GET /api/v1/adresse/{id}` og `GET /api/v1/adresse/sok?q=...`
+     - REST API: `GET /api/adresse/{id}` og `GET /api/adresse/sok?q=...`
      - Phase2 import for bulk
    - **STATUS**: ❌ KAN FJERNES
 
@@ -61,7 +61,7 @@ Disse ble laget før REST API var på plass. De er **redundante** fordi:
    - Fil: `BruksenhetCommand.php`
    - Funksjon: Hent bruksenheter via SOAP API
    - **Erstattet av**: 
-     - REST API: `GET /api/v1/bruksenhet/{id}` og `GET /api/v1/bruksenhet/adresse/{adresseId}`
+     - REST API: `GET /api/bruksenhet/{id}` og `GET /api/bruksenhet/adresse/{adresseId}`
      - Phase2 import for bulk
    - **STATUS**: ❌ KAN FJERNES
 
@@ -69,7 +69,7 @@ Disse ble laget før REST API var på plass. De er **redundante** fordi:
    - Fil: `KommuneCommand.php`
    - Funksjon: Hent enkelt-kommune via SOAP API
    - **Erstattet av**: 
-     - REST API: `GET /api/v1/kommune/{id}` og `GET /api/v1/kommune/nummer/{nummer}`
+     - REST API: `GET /api/kommune/{id}` og `GET /api/kommune/nummer/{nummer}`
      - `matrikkel:kommune-import` for bulk
    - **STATUS**: ❌ KAN FJERNES
 
@@ -77,14 +77,14 @@ Disse ble laget før REST API var på plass. De er **redundante** fordi:
    - Fil: `KodelisteCommand.php`
    - Funksjon: Hent kodelister via SOAP API
    - **Erstattet av**: 
-     - REST API: `GET /api/v1/kodeliste` og `GET /api/v1/kodeliste/{id}`
+     - REST API: `GET /api/kodeliste` og `GET /api/kodeliste/{id}`
    - **STATUS**: ❌ KAN FJERNES
 
 5. **`matrikkel:matrikkelenhet`**
    - Fil: `MatrikkelenhetCommand.php`
    - Funksjon: Hent enkelt matrikkelenhet via SOAP API
    - **Erstattet av**: 
-     - REST API: `GET /api/v1/matrikkelenhet/{id}` eller `GET /api/v1/matrikkelenhet/{knr}/{gnr}/{bnr}`
+     - REST API: `GET /api/matrikkelenhet/{id}` eller `GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}`
      - Phase1 import for bulk
    - **STATUS**: ❌ KAN FJERNES
 
@@ -114,7 +114,7 @@ Disse ble laget før REST API var på plass. De er **redundante** fordi:
 1. **`matrikkel:sok`**
    - Fil: `MatrikkelsokCommand.php`
    - Funksjon: Generelt søk i Matrikkel API
-   - **Erstattet av**: REST API: `GET /api/v1/sok?q=...&source=api`
+   - **Erstattet av**: REST API: `GET /api/sok?q=...&source=api`
    - **STATUS**: ❌ KAN FJERNES
 
 2. **`matrikkel:debug-matrikkelenhet`**
@@ -149,10 +149,10 @@ Disse ble laget før REST API var på plass. De er **redundante** fordi:
 3. ✅ **Test REST API endpoints**
    ```bash
    # Test at alle REST API endpoints fungerer
-   curl http://localhost:8083/api/v1/ping
-   curl http://localhost:8083/api/v1/endpoints
-   curl "http://localhost:8083/api/v1/adresse/sok?q=Bergen"
-   curl http://localhost:8083/api/v1/kommune/4601
+   curl http://localhost:8083/api/ping
+   curl http://localhost:8083/api/endpoints
+   curl "http://localhost:8083/api/adresse/sok?q=Bergen"
+   curl http://localhost:8083/api/kommune/4601
    ```
 
 4. ✅ **Test Phase1 og Phase2**
@@ -237,9 +237,9 @@ php bin/console list matrikkel
 #### **Steg 3: Test REST API fortsatt fungerer**
 
 ```bash
-curl http://localhost:8083/api/v1/ping
-curl "http://localhost:8083/api/v1/adresse/sok?q=Oslo"
-curl http://localhost:8083/api/v1/kommune/4601
+curl http://localhost:8083/api/ping
+curl "http://localhost:8083/api/adresse/sok?q=Oslo"
+curl http://localhost:8083/api/kommune/4601
 ```
 
 #### **Steg 4: Test Phase1 og Phase2**
@@ -305,12 +305,12 @@ Marker gamle commands som deprecated:
 
 The following commands have been replaced by Phase1/Phase2 import and REST API:
 
-- ~~`matrikkel:adresse`~~ → Use REST API `GET /api/v1/adresse/{id}`
-- ~~`matrikkel:bruksenhet`~~ → Use REST API `GET /api/v1/bruksenhet/{id}`
-- ~~`matrikkel:kommune`~~ → Use REST API `GET /api/v1/kommune/{id}`
-- ~~`matrikkel:kodeliste`~~ → Use REST API `GET /api/v1/kodeliste/{id}`
-- ~~`matrikkel:matrikkelenhet`~~ → Use REST API `GET /api/v1/matrikkelenhet/{id}`
-- ~~`matrikkel:sok`~~ → Use REST API `GET /api/v1/sok?q=...`
+- ~~`matrikkel:adresse`~~ → Use REST API `GET /api/adresse/{id}`
+- ~~`matrikkel:bruksenhet`~~ → Use REST API `GET /api/bruksenhet/{id}`
+- ~~`matrikkel:kommune`~~ → Use REST API `GET /api/kommune/{id}`
+- ~~`matrikkel:kodeliste`~~ → Use REST API `GET /api/kodeliste/{id}`
+- ~~`matrikkel:matrikkelenhet`~~ → Use REST API `GET /api/matrikkelenhet/{id}`
+- ~~`matrikkel:sok`~~ → Use REST API `GET /api/sok?q=...`
 - ~~`matrikkel:matrikkelenhet-import`~~ → Use `matrikkel:phase1-import`
 - ~~`matrikkel:kommune-import`~~ → Use `matrikkel:phase1-import`
 - ~~`matrikkel:adresse-import`~~ → Use `matrikkel:phase2-import`

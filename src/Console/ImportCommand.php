@@ -206,7 +206,7 @@ HELP
             '',
             'Next steps:',
             '1. Verify data in database',
-            '2. Test REST API endpoints at http://localhost:8083/api/v1/',
+            '2. Test REST API endpoints at http://localhost:8083/api/',
         ]);
 
         return Command::SUCCESS;
