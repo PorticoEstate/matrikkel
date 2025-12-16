@@ -178,6 +178,8 @@ class PorticoExportService
 			'byggeaar' => $bygning['byggeaar'] ?? null,
 			'antall_etasjer' => $bygning['antall_etasjer'] ?? null,
 			'bygningstype_kode_id' => $bygning['bygningstype_kode_id'] ?? null,
+			'representasjonspunkt_x' => $bygning['representasjonspunkt_x'] ?? null,
+			'representasjonspunkt_y' => $bygning['representasjonspunkt_y'] ?? null,
             'innganger' => $innganger,
         ];
     }
@@ -199,6 +201,7 @@ class PorticoExportService
         return [
             'lokasjonskode' => $inngang['lokasjonskode_inngang'] ?? null,
             'inngang_id' => $inngangId,
+			'gatenavn' => $inngang['gatenavn'] ?? null,
             'husnummer' => (int)$inngang['husnummer'] ?? null,
             'bokstav' => $inngang['bokstav'] ?? null,
             'veg_id' => $inngang['veg_id'] ?? null,

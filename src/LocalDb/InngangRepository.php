@@ -21,8 +21,9 @@ class InngangRepository extends DatabaseRepository
     public function findByBygningId(int $bygningId): array
     {
         $sql = "
-            SELECT *
+            SELECT matrikkel_innganger.*, matrikkel_veger.adressenavn as gatenavn
             FROM matrikkel_innganger
+            LEFT JOIN matrikkel_veger ON matrikkel_innganger.veg_id = matrikkel_veger.veg_id
             WHERE bygning_id = :bygning_id
             ORDER BY lopenummer_i_bygg, husnummer, bokstav
         ";
