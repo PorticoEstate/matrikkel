@@ -224,11 +224,17 @@ curl "http://localhost:8083/api/search?q=oslo&source=api&limit=50&offset=100"  #
 # Search in local database
 curl "http://localhost:8083/api/search?q=Oslo&source=db"
 
-# Export Portico hierarchy for a municipality
+# Export Portico hierarchy for a municipality (JSON)
 curl "http://localhost:8083/api/portico/export?kommune=4627"
 
-# Export Portico hierarchy filtered by owner
+# Export Portico hierarchy filtered by owner (JSON)
 curl "http://localhost:8083/api/portico/export?kommune=4627&organisasjonsnummer=964338442"
+
+# Export Portico hierarchy as Excel spreadsheet
+curl -o portico_export.xlsx "http://localhost:8083/api/portico/export/spreadsheet?kommune=4627"
+
+# Export filtered by owner as Excel spreadsheet
+curl -o portico_owner.xlsx "http://localhost:8083/api/portico/export/spreadsheet?kommune=4627&organisasjonsnummer=964338442"
 ```
 ```
 
@@ -252,6 +258,62 @@ curl "http://localhost:8083/api/search?q=oslo&source=api&limit=50&offset=100"  #
 # Search with local database
 curl "http://localhost:8083/api/search?q=Oslo&source=db"
 
+```
+
+### Spreadsheet Export Feature
+
+The project includes Excel spreadsheet export for the Portico 4-level hierarchy:
+
+**REST API Endpoint:**
+```bash
+GET /api/portico/export/spreadsheet
+```
+
+**Query Parameters:**
+- `kommune` (optional): 4-digit municipality number (e.g., 4627)
+- `organisasjonsnummer` (optional): Organization number to filter by owner
+
+**Examples:**
+```bash
+# Export all properties
+curl -o portico_export.xlsx "http://localhost:8083/api/portico/export/spreadsheet"
+
+# Export specific municipality
+curl -o askoy_export.xlsx "http://localhost:8083/api/portico/export/spreadsheet?kommune=4627"
+
+# Export filtered by owner
+curl -o org_export.xlsx "http://localhost:8083/api/portico/export/spreadsheet?kommune=4627&organisasjonsnummer=964338442"
+```
+
+**Spreadsheet Structure:**
+
+The exported file contains 4 tabs (one per hierarchy level):
+
+1. **Eiendom** (Properties)
+   - Columns: loc1, loc2, loc3, loc4, lokasjonskode, matrikkelenhet_id, matrikkelnummer_tekst, kommunenummer, areal
+
+2. **Bygg** (Buildings)
+   - Columns: loc1, loc2, loc3, loc4, lokasjonskode, bygning_id, matrikkel_bygning_nummer, lopenummer_i_eiendom, bygningstype_kode_id, antall_etasjer, bruksareal, byggeaar, representasjonspunkt_x, representasjonspunkt_y
+
+3. **Inngang** (Entrances)
+   - Columns: loc1, loc2, loc3, loc4, lokasjonskode, inngang_id, gatenavn, husnummer, bokstav, veg_id, adressekode, lopenummer_i_bygg
+
+4. **Bruksenhet** (Dwelling Units)
+   - Columns: loc1, loc2, loc3, loc4, lokasjonskode, bruksenhet_id, lopenummer_i_inngang, bruksenhettype_kode_id, etasjeplan_kode_id, etasjenummer, antall_rom, bruksareal
+
+**Features:**
+- ✓ `lokasjonskode` automatically split into loc1, loc2, loc3, loc4 columns
+- ✓ Headers formatted with blue background and white text
+- ✓ Auto-width columns for readability
+- ✓ Supports filtering by municipality and owner
+- ✓ Automatic filename with timestamp
+
+**Alternative: CLI Command**
+```bash
+php bin/console matrikkel:export-spreadsheet \
+  --kommune=4627 \
+  --organisasjonsnummer=964338442 \
+  --output=export.xlsx
 ```
 
 All endpoints return JSON with this structure:

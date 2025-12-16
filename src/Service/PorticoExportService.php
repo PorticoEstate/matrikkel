@@ -44,6 +44,7 @@ use Iaasen\Matrikkel\LocalDb\BruksenhetRepository;
 use Iaasen\Matrikkel\LocalDb\BygningRepository;
 use Iaasen\Matrikkel\LocalDb\InngangRepository;
 use Iaasen\Matrikkel\LocalDb\MatrikkelenhetRepository;
+use Iaasen\Matrikkel\LocalDb\VegRepository;
 
 class PorticoExportService
 {
@@ -52,6 +53,7 @@ class PorticoExportService
         private BygningRepository $bygningRepository,
         private InngangRepository $inngangRepository,
         private BruksenhetRepository $bruksenhetRepository,
+        private VegRepository $vegRepository,
     ) {}
 
     /**
@@ -87,8 +89,15 @@ class PorticoExportService
             }
         }
 
+        // Fetch streets (gater) for the kommune if provided
+        $gater = [];
+        if ($kommune) {
+            $gater = $this->vegRepository->findByKommunenummer($kommune);
+        }
+
         return [
             'eiendommer' => $eiendommer,
+            'gater' => $gater,
             'count' => count($eiendommer),
         ];
     }
@@ -173,13 +182,11 @@ class PorticoExportService
             'matrikkel_bygning_nummer' => $bygning['matrikkel_bygning_nummer'] ?? null,
             'lopenummer_i_eiendom' => (int)$bygning['lopenummer_i_eiendom'] ?? null,
             'bygningstype_kode_id' => $bygning['bygningstype_kode_id'] ?? null,
-			'antall_etasjer' => $bygning['antall_etasjer'] ?? null,
-			'bruksareal' => $bygning['bruksareal'] ?? null,
-			'byggeaar' => $bygning['byggeaar'] ?? null,
-			'antall_etasjer' => $bygning['antall_etasjer'] ?? null,
-			'bygningstype_kode_id' => $bygning['bygningstype_kode_id'] ?? null,
-			'representasjonspunkt_x' => $bygning['representasjonspunkt_x'] ?? null,
-			'representasjonspunkt_y' => $bygning['representasjonspunkt_y'] ?? null,
+            'antall_etasjer' => $bygning['antall_etasjer'] ?? null,
+            'bruksareal' => $bygning['bruksareal'] ?? null,
+            'byggeaar' => $bygning['byggeaar'] ?? null,
+            'representasjonspunkt_x' => $bygning['representasjonspunkt_x'] ?? null,
+            'representasjonspunkt_y' => $bygning['representasjonspunkt_y'] ?? null,
             'innganger' => $innganger,
         ];
     }
@@ -221,9 +228,29 @@ class PorticoExportService
             'bruksenhet_id' => (int)$enhet['bruksenhet_id'],
             'lopenummer_i_inngang' => (int)$enhet['lopenummer_i_inngang'] ?? null,
             'bruksenhettype_kode_id' => $enhet['bruksenhettype_kode_id'] ?? null,
+            'etasjeplan_kode_id' => $enhet['etasjeplan_kode_id'] ?? null,
             'etasjenummer' => $enhet['etasjenummer'] ?? null,
             'antall_rom' => $enhet['antall_rom'] ?? null,
             'bruksareal' => $enhet['bruksareal'] ?? null,
         ];
+    }
+
+    /**
+     * Export hierarchy as Excel spreadsheet
+     * 
+     * @param int|null $kommune (optional filter)
+     * @param string|null $organisasjonsnummer (optional filter on owner)
+     * @return \PhpOffice\PhpSpreadsheet\Spreadsheet
+     */
+    public function exportAsSpreadsheet(int|null $kommune = null, string|null $organisasjonsnummer = null): \PhpOffice\PhpSpreadsheet\Spreadsheet
+    {
+        // Get the hierarchical data
+        $exportData = $this->export($kommune, $organisasjonsnummer);
+        
+        // Use ExcelExportService to create spreadsheet
+        $excelExporter = new ExcelExportService();
+        $spreadsheet = $excelExporter->export($exportData);
+        
+        return $spreadsheet;
     }
 }
