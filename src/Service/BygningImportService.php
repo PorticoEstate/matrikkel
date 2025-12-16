@@ -229,9 +229,30 @@ class BygningImportService
             }
         }
         
-        // antallEtasjer is in kommunalTilleggsdel according to WSDL (kommunetillegg.xsd line 154)
+        // Calculate antall_etasjer from etasjer list (more reliable than kommunalTilleggsdel which is rarely populated)
+        // According to WSDL (bygning.xsd line 57): etasjer is EtasjeList of Etasje objects with etasjenummer
         $antall_etasjer = null;
-        if (isset($bygning->kommunalTilleggsdel) && isset($bygning->kommunalTilleggsdel->antallEtasjer)) {
+        if (isset($bygning->etasjer) && isset($bygning->etasjer->item)) {
+            $etasjerItems = is_array($bygning->etasjer->item) 
+                ? $bygning->etasjer->item 
+                : [$bygning->etasjer->item];
+            
+            // Count etasjer with valid etasjenummer (ignoring kellar, podium, etc)
+            $etasjeNumre = [];
+            foreach ($etasjerItems as $etasje) {
+                if (isset($etasje->etasjenummer)) {
+                    $etasjeNumre[] = (int) $etasje->etasjenummer;
+                }
+            }
+            
+            if (!empty($etasjeNumre)) {
+                // Antall etasjer = max etasje number (e.g., 1, 2, 3 etasjer)
+                $antall_etasjer = max($etasjeNumre);
+            }
+        }
+        
+        // Fallback to kommunalTilleggsdel if etasjer not available (unlikely)
+        if ($antall_etasjer === null && isset($bygning->kommunalTilleggsdel) && isset($bygning->kommunalTilleggsdel->antallEtasjer)) {
             $antall_etasjer = (int) $bygning->kommunalTilleggsdel->antallEtasjer;
         }
         
