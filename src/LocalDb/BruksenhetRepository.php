@@ -54,6 +54,7 @@ class BruksenhetRepository extends DatabaseRepository
         $sql = "
             SELECT 
                 br.*, 
+                a.adresse_id,
                 va.veg_id,
                 va.nummer AS husnummer,
                 va.bokstav,
@@ -207,6 +208,23 @@ class BruksenhetRepository extends DatabaseRepository
     }
 
     /**
+     * Set adresse_id reference for a bruksenhet
+     */
+    public function updateAdresseReference(int $bruksenhetId, ?int $adresseId): void
+    {
+        $sql = "
+            UPDATE matrikkel_bruksenheter
+            SET adresse_id = :adresse_id
+            WHERE bruksenhet_id = :bruksenhet_id
+        ";
+
+        $this->execute($sql, [
+            'bruksenhet_id' => $bruksenhetId,
+            'adresse_id' => $adresseId,
+        ]);
+    }
+
+    /**
      * Update lokasjonskode for bruksenhet
      */
     public function updateLokasjonskode(int $bruksenhetId, string $lokasjonskode): void
@@ -247,5 +265,29 @@ class BruksenhetRepository extends DatabaseRepository
         ";
 
         return $this->fetchOne($sql) ?? [];
+    }
+
+    /**
+     * Find bruksenheter with missing adresse_id within a kommune
+     */
+    public function findMissingAddressByKommune(int $kommunenummer, int $limit = 10000): array
+    {
+        $sql = "
+            SELECT 
+                br.*, 
+                me.matrikkelenhet_id, 
+                me.kommunenummer
+            FROM matrikkel_bruksenheter br
+            JOIN matrikkel_matrikkelenheter me ON br.matrikkelenhet_id = me.matrikkelenhet_id
+            WHERE br.adresse_id IS NULL
+              AND me.kommunenummer = :kommunenummer
+            ORDER BY br.bygning_id, br.bruksenhet_id
+            LIMIT :limit
+        ";
+
+        return $this->fetchAll($sql, [
+            'kommunenummer' => $kommunenummer,
+            'limit' => $limit,
+        ]);
     }
 }

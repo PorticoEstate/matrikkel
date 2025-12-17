@@ -171,20 +171,40 @@ class AdresseRepository extends DatabaseRepository
      */
     public function findByMatrikkelenhetId(int $matrikkelenhetId): array
     {
+        // Fetch addresses linked directly on adressen (a.matrikkelenhet_id)
+        // and via the junction table matrikkel_matrikkelenhet_adresse
         $sql = "
-            SELECT 
-                a.adresse_id,
-                a.adressetype,
-                a.adressetilleggsnavn,
-                a.kortnavn,
-                va.nummer,
-                va.bokstav,
-                v.adressenavn
-            FROM matrikkel_adresser a
-            LEFT JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
-            LEFT JOIN matrikkel_veger v ON va.veg_id = v.veg_id
-            WHERE a.matrikkelenhet_id = :matrikkelenhet_id
-            ORDER BY v.adressenavn, va.nummer, va.bokstav
+            (
+                SELECT 
+                    a.adresse_id,
+                    a.adressetype,
+                    a.adressetilleggsnavn,
+                    a.kortnavn,
+                    va.nummer,
+                    va.bokstav,
+                    v.adressenavn
+                FROM matrikkel_adresser a
+                LEFT JOIN matrikkel_vegadresser va ON a.adresse_id = va.vegadresse_id
+                LEFT JOIN matrikkel_veger v ON va.veg_id = v.veg_id
+                WHERE a.matrikkelenhet_id = :matrikkelenhet_id
+            )
+            UNION
+            (
+                SELECT 
+                    a2.adresse_id,
+                    a2.adressetype,
+                    a2.adressetilleggsnavn,
+                    a2.kortnavn,
+                    va2.nummer,
+                    va2.bokstav,
+                    v2.adressenavn
+                FROM matrikkel_matrikkelenhet_adresse ma
+                JOIN matrikkel_adresser a2 ON ma.adresse_id = a2.adresse_id
+                LEFT JOIN matrikkel_vegadresser va2 ON a2.adresse_id = va2.vegadresse_id
+                LEFT JOIN matrikkel_veger v2 ON va2.veg_id = v2.veg_id
+                WHERE ma.matrikkelenhet_id = :matrikkelenhet_id
+            )
+            ORDER BY adressenavn NULLS LAST, nummer NULLS LAST, bokstav NULLS LAST
         ";
 
         return $this->fetchAll($sql, ['matrikkelenhet_id' => $matrikkelenhetId]);

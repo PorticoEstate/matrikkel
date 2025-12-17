@@ -61,10 +61,12 @@ class HierarchyOrganizationService
 
         // Group by entrance key: (veg_id, husnummer, bokstav)
         $groups = [];
+        $unassigned = [];
         foreach ($bruksenheter as $br) {
             $husnummer = $br['husnummer'] ?? null;
             if ($husnummer === null) {
-                // Skip units without address; could be handled separately if needed
+                // Collect units without address for fallback handling
+                $unassigned[] = $br;
                 continue;
             }
             $key = sprintf('%s|%s|%s', $br['veg_id'] ?? 'null', $husnummer, $br['bokstav'] ?? '');
@@ -142,6 +144,42 @@ class HierarchyOrganizationService
             }
 
             $entranceSeq++;
+        }
+
+        // Fallback: ensure units without address are still organized under a synthetic entrance
+        if (!empty($unassigned)) {
+            $syntheticInngang = $this->inngangRepository->findOrCreate($bygningId, null, 0, null, null);
+            $this->inngangRepository->updateLopenummer((int) $syntheticInngang['inngang_id'], $entranceSeq);
+            $syntheticKode = $this->formatInngangKode($byggKode, $entranceSeq);
+            $this->inngangRepository->updateLokasjonskode((int) $syntheticInngang['inngang_id'], $syntheticKode);
+
+            // Stable ordering for unassigned units
+            usort($unassigned, function ($a, $b) {
+                $ea = $a['etasjenummer'] ?? null;
+                $eb = $b['etasjenummer'] ?? null;
+                if ($ea !== $eb) {
+                    if ($ea === null) return -1;
+                    if ($eb === null) return 1;
+                    return $ea <=> $eb;
+                }
+                $la = $a['lopenummer'] ?? 0;
+                $lb = $b['lopenummer'] ?? 0;
+                if ($la !== $lb) {
+                    return $la <=> $lb;
+                }
+                return ($a['bruksenhet_id'] ?? 0) <=> ($b['bruksenhet_id'] ?? 0);
+            });
+
+            $unitSeq = 1;
+            foreach ($unassigned as $br) {
+                $bruksenhetId = (int) ($br['bruksenhet_id'] ?? 0);
+                if ($bruksenhetId <= 0) { continue; }
+                $this->bruksenhetRepository->updateInngangReference($bruksenhetId, (int) $syntheticInngang['inngang_id']);
+                $this->bruksenhetRepository->updateLopenummerIInngang($bruksenhetId, $unitSeq);
+                $brKode = $this->formatBruksenhetKode($syntheticKode, $unitSeq);
+                $this->bruksenhetRepository->updateLokasjonskode($bruksenhetId, $brKode);
+                $unitSeq++;
+            }
         }
     }
 

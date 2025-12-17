@@ -167,7 +167,8 @@ class ExcelExportService
 			'bokstav',
 			'veg_id',
 			'adressekode',
-			'lopenummer_i_bygg'
+			'lopenummer_i_bygg',
+			'matrikkelnummer_tekst'
 		];
 
 		foreach ($headers as $col => $header)
@@ -198,6 +199,7 @@ class ExcelExportService
 					$sheet->setCellValue([9, $row], $inngang['veg_id'] ?? '');
 					$sheet->setCellValue([10, $row], $inngang['adressekode'] ?? '');
 					$sheet->setCellValue([11, $row], $inngang['lopenummer_i_bygg'] ?? '');
+					$sheet->setCellValue([12, $row], $eiendom['matrikkelnummer_tekst'] ?? '');
 
 					$row++;
 				}
@@ -227,7 +229,8 @@ class ExcelExportService
 			'etasjeplan_kode_id',
 			'etasjenummer',
 			'antall_rom',
-			'bruksareal'
+			'bruksareal',
+			'matrikkelnummer_tekst'
 		];
 
 		foreach ($headers as $col => $header)
@@ -260,6 +263,7 @@ class ExcelExportService
 						$sheet->setCellValue([9, $row], $bruksenhet['etasjenummer'] ?? '');
 						$sheet->setCellValue([10, $row], $bruksenhet['antall_rom'] ?? '');
 						$sheet->setCellValue([11, $row], $bruksenhet['bruksareal'] ?? '');
+						$sheet->setCellValue([12, $row], $eiendom['matrikkelnummer_tekst'] ?? '');
 
 						$row++;
 					}
