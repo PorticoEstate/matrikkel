@@ -102,30 +102,32 @@ php bin/console matrikkel:ping
 php bin/console matrikkel:ping
 ```
 
-**Import data:**
+**Import data (complete workflow):**
 
 ```bash
-# Complete import (both phases combined)
+# 1) Full import (Phase 1 + Phase 2). Phase 2 step 6 automatically importerer
+#    manglende adresser referert fra bruksenheter (orphan resolution):
 php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442
 
-# With limit for testing
-php bin/console matrikkel:import --kommune=4627 --organisasjonsnummer=964338442 --limit=10
+# 2) Kjør hierarki-organisering slik at innganger/lokasjonskoder materialiseres:
+php bin/console matrikkel:organize-hierarchy --kommune=4627 --force
 
-# Skip Phase 1 (only import buildings and addresses)
-php bin/console matrikkel:import --kommune=4627 --skip-phase1
-
-# Skip Phase 2 (only import properties and owners)
-php bin/console matrikkel:import --kommune=4627 --skip-phase2
+# 3) Eksporter Excel (Portico 4-nivå) klart for bruk:
+php bin/console matrikkel:export-spreadsheet --kommune=4627 --output=/tmp/export.xlsx
 ```
 
-**Alternative: Two-phase approach (if needed):**
+**Import data (two-phase, hvis du vil kjøre separat):**
 
 ```bash
 # Phase 1: Import base data (kommune, matrikkelenheter, personer, eierforhold)
 php bin/console matrikkel:phase1-import --kommune=4627 --organisasjonsnummer=964338442
 
-# Phase 2: Import building data (veger, bygninger, bruksenheter, adresser)
+# Phase 2: Import bygg/bruksenheter/adresser (med automatisk orphan resolution i step 6)
 php bin/console matrikkel:phase2-import --kommune=4627 --organisasjonsnummer=964338442
+
+# Etter Phase 2: organiser hierarki og eksporter Excel
+php bin/console matrikkel:organize-hierarchy --kommune=4627 --force
+php bin/console matrikkel:export-spreadsheet --kommune=4627 --output=/tmp/export.xlsx
 ```
 
 **Debug commands:**

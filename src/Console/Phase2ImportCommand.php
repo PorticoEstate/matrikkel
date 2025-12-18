@@ -117,6 +117,7 @@ matrikkelenheter that exist in the database.
   2. <fg=cyan>Bygninger</fg=cyan>: Bulk download + client-side filter
   3. <fg=cyan>Bruksenheter</fg=cyan>: API-filtered (two-step pattern)
   4. <fg=cyan>Adresser</fg=cyan>: API-filtered (two-step pattern)
+  5. <fg=cyan>Missing Adresser</fg=cyan>: Orphan resolution (imports addresses referenced by bruksenheter)
 
 <comment>Examples:</comment>
   # Import all data for kommune (no owner filter)
@@ -169,7 +170,7 @@ HELP
         
         try {
             // Step 1: Filter matrikkelenheter by owner (SERVER-SIDE via Matrikkel API)
-            $io->section('Step 1/5: Filtering matrikkelenheter by owner');
+            $io->section('Step 1/6: Filtering matrikkelenheter by owner');
             
             $filteredMatrikkelenheter = $this->matrikkelenhetFilterService->filterMatrikkelenheterByOwner(
                 $io,
@@ -195,13 +196,13 @@ HELP
             
             // Step 2: Import veger (bulk download - entire kommune)
             // CRITICAL: Must happen BEFORE adresser!
-            $io->section('Step 2/5: Importing veger (bulk download)');
+            $io->section('Step 2/6: Importing veger (bulk download)');
             $io->text('Veger must be imported before adresser due to foreign key constraints');
             $vegCount = $this->vegImportService->importVegerForKommune($kommunenummer);
             $io->success(sprintf('Imported veger: %d', $vegCount));
             
             // Step 3: Import bygninger (API-filtered)
-            $io->section('Step 3/5: Importing bygninger (API-filtered)');
+            $io->section('Step 3/6: Importing bygninger (API-filtered)');
             $result = $this->bygningImportService->importBygningerForMatrikkelenheter(
                 $filteredMatrikkelenheter,
                 $io
@@ -213,7 +214,7 @@ HELP
             ));
 
             // Step 4: Import bruksenheter (API-filtered)
-            $io->section('Step 4/5: Importing bruksenheter (API-filtered)');
+            $io->section('Step 4/6: Importing bruksenheter (API-filtered)');
             $bruksenhetCount = $this->bruksenhetImportService->importBruksenheterForMatrikkelenheter(
                 $io,
                 $kommunenummer,
@@ -222,7 +223,7 @@ HELP
             );
             
             // Step 5: Import adresser (API-filtered)
-            $io->section('Step 5/5: Importing adresser (API-filtered)');
+            $io->section('Step 5/6: Importing adresser (API-filtered)');
             $io->text('Adresser depend on veger being in database (FK constraint for vegadresser)');
             
             // $filteredMatrikkelenheter is already array of matrikkelenhet_id integers
@@ -237,6 +238,24 @@ HELP
                 $adresseResult['relations']
             ));
             
+            // Step 6: Import missing adresser referenced by bruksenheter (Orphan Resolution)
+            $io->section('Step 6/6: Resolving orphaned adresse references');
+            $io->text('Importing addresses that bruksenheter reference but were filtered out');
+            
+            $missingAdresseResult = $this->adresseImportService->importMissingAdresserFromBruksenheter(
+                $io,
+                $kommunenummer,
+                1000  // batch size
+            );
+            
+            if ($missingAdresseResult['adresser'] > 0) {
+                $io->success(sprintf(
+                    'Resolved %d orphaned references (imported %d missing addresses)',
+                    $missingAdresseResult['adresser'],
+                    $missingAdresseResult['relations']
+                ));
+            }
+            
             $duration = round(microtime(true) - $startTime, 2);
             
             $io->newLine();
@@ -248,6 +267,7 @@ HELP
                 "Imported bruksenheter: $bruksenhetCount",
                 "Imported bygninger: {$result['bygninger']} (+ {$result['relations']} relations)",
                 "Imported adresser: {$adresseResult['adresser']} (+ {$adresseResult['relations']} relations)",
+                "Resolved orphaned addresses: {$missingAdresseResult['adresser']} (+ {$missingAdresseResult['relations']} relations)",
             ]);
             
             return Command::SUCCESS;

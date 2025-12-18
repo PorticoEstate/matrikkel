@@ -45,6 +45,129 @@ class AdresseImportService
     }
     
     /**
+     * Import missing adresser referenced by bruksenheter (Orphan Resolution)
+     * 
+     * This method finds adresse_id values that are referenced by bruksenheter
+     * but don't exist in matrikkel_adresser table, then imports them via StoreClient.
+     * 
+     * This is useful when Phase 2 import was run with owner filter, causing
+     * bruksenheter to reference addresses that weren't imported.
+     * 
+     * @param SymfonyStyle $io Console output
+     * @param int $kommunenummer Kommune number (for filtering)
+     * @param int $batchSize Batch size for StoreClient calls
+     * @return array ['adresser' => int, 'relations' => int]
+     */
+    public function importMissingAdresserFromBruksenheter(
+        SymfonyStyle $io,
+        int $kommunenummer,
+        int $batchSize = 1000
+    ): array {
+        $io->section("Importing missing adresser referenced by bruksenheter");
+        
+        // Find orphaned adresse_id references
+        $io->text("Finner orphaned adresse-referanser...");
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT br.adresse_id, br.matrikkelenhet_id
+            FROM matrikkel_bruksenheter br
+            LEFT JOIN matrikkel_adresser a ON br.adresse_id = a.adresse_id
+            WHERE br.matrikkelenhet_id IN (
+                SELECT matrikkelenhet_id FROM matrikkel_matrikkelenheter WHERE kommunenummer = ?
+            )
+            AND br.adresse_id IS NOT NULL
+            AND a.adresse_id IS NULL
+        ");
+        $stmt->execute([$kommunenummer]);
+        $orphanedRefs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (empty($orphanedRefs)) {
+            $io->success("Ingen orphaned adresse-referanser funnet! Alle bruksenheter har valid addresses.");
+            return ['adresser' => 0, 'relations' => 0];
+        }
+        
+        $orphanedIds = array_unique(array_column($orphanedRefs, 'adresse_id'));
+        $io->warning(sprintf("Funnet %d orphaned adresse-IDs referert av bruksenheter", count($orphanedIds)));
+        
+        // Build adresse_id => matrikkelenhet_id mapping
+        $adresseToMatrikkelenheter = [];
+        foreach ($orphanedRefs as $ref) {
+            $adresseId = (int) $ref['adresse_id'];
+            $matrikkelenhetId = (int) $ref['matrikkelenhet_id'];
+            if (!isset($adresseToMatrikkelenheter[$adresseId])) {
+                $adresseToMatrikkelenheter[$adresseId] = [];
+            }
+            $adresseToMatrikkelenheter[$adresseId][$matrikkelenhetId] = true;
+        }
+        
+        // Fetch these addresses from API via StoreClient
+        $io->text("Henter fullstendige adresse-objekter fra API...");
+        
+        $adresseCount = 0;
+        $relationCount = 0;
+        
+        $progressBar = $io->createProgressBar(count($orphanedIds));
+        $progressBar->setFormat('very_verbose');
+        
+        foreach (array_chunk($orphanedIds, $batchSize) as $batch) {
+            try {
+                $adresseIdObjects = array_map(fn($id) => new AdresseId($id), $batch);
+                $adresser = $this->storeClient->getObjects($adresseIdObjects);
+                
+                if (empty($adresser)) {
+                    $progressBar->advance(count($batch));
+                    continue;
+                }
+                
+                if (!is_array($adresser)) {
+                    $adresser = [$adresser];
+                }
+                
+                foreach ($adresser as $adresse) {
+                    $adresseId = (int) $adresse->id->value;
+                    
+                    // Save base adresse
+                    $primaryMatrikkelenhetId = isset($adresseToMatrikkelenheter[$adresseId])
+                        ? array_key_first($adresseToMatrikkelenheter[$adresseId])
+                        : null;
+                    
+                    $this->saveAdresse($adresse, $primaryMatrikkelenhetId);
+                    $adresseCount++;
+                    
+                    // Save vegadresse if applicable
+                    $adresseType = $this->getAdresseType($adresse);
+                    if ($adresseType === 'VEGADRESSE') {
+                        $this->saveVegadresse($adresse);
+                    }
+                    
+                    // Save M:N relations
+                    if (isset($adresseToMatrikkelenheter[$adresseId])) {
+                        foreach (array_keys($adresseToMatrikkelenheter[$adresseId]) as $matrikkelenhetId) {
+                            $this->saveMatrikkelenhetAdresseRelation($matrikkelenhetId, $adresseId);
+                            $relationCount++;
+                        }
+                    }
+                }
+                
+            } catch (\Exception $e) {
+                $io->error("Feil ved henting av adresse-objekter: " . $e->getMessage());
+            }
+            
+            $progressBar->advance(count($batch));
+        }
+        
+        $progressBar->finish();
+        $io->newLine(2);
+        
+        $io->success(sprintf(
+            "Importerte %d orphaned addresses (%d M:N relations)",
+            $adresseCount,
+            $relationCount
+        ));
+        
+        return ['adresser' => $adresseCount, 'relations' => $relationCount];
+    }
+
+    /**
      * Import adresser for all matrikkelenheter in database
      * 
      * @param SymfonyStyle $io Console output
