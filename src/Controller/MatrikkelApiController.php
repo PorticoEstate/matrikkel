@@ -11,10 +11,8 @@ namespace Iaasen\Matrikkel\Controller;
 
 use Iaasen\Matrikkel\LocalDb\AdresseRepository;
 use Iaasen\Matrikkel\LocalDb\BruksenhetRepository;
-use Iaasen\Matrikkel\LocalDb\BygningRepository;
 use Iaasen\Matrikkel\LocalDb\KommuneRepository;
 use Iaasen\Matrikkel\LocalDb\MatrikkelenhetRepository;
-use Iaasen\Matrikkel\LocalDb\PersonRepository;
 use Iaasen\Matrikkel\LocalDb\VegRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,10 +25,8 @@ class MatrikkelApiController extends AbstractController
     public function __construct(
         private AdresseRepository $adresseRepository,
         private BruksenhetRepository $bruksenhetRepository,
-        private BygningRepository $bygningRepository,
         private KommuneRepository $kommuneRepository,
         private MatrikkelenhetRepository $matrikkelenhetRepository,
-        private PersonRepository $personRepository,
         private VegRepository $vegRepository
     ) {}
 
