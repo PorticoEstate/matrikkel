@@ -47,7 +47,7 @@ class MatrikkelApiController extends AbstractController
             'adresse' => [
                 'GET /api/adresse/{id}' => 'Hent adresse på ID',
                 'GET /api/adresse/sok?q={query}&limit={number}' => 'Søk adresser (database)',
-                'GET /api/adresse/sok/db?q={query}' => 'Søk adresser i lokal database (alias)',
+                'GET /api/adresse/sok/db?q={query}&limit={number}' => 'Søk adresser i lokal database (alias)',
                 'GET /api/adresse/kommune/{kommunenummer}?limit={number}' => 'Hent adresser i kommune',
                 'GET /api/adresse/kommune/{kommunenummer}/{bygningsnummer}?limit={number}' => 'Hent adresser i kommune for bygningsnummer'
             ],

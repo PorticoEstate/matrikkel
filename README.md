@@ -161,50 +161,44 @@ This command assigns deterministic location codes to the 4-level hierarchy:
 
 **Note**: For searching individual addresses, property units, cadastral units, municipalities, or code lists, use the REST API endpoints below instead of console commands.
 
-### REST API Endpoints
-
-The project now includes a comprehensive REST API that provides JSON access to all Matrikkel functionality:
+### REST API Endpoints (local database)
 
 **Base URL**: `http://localhost:8083/api`
 
-**Available Endpoints**:
-
 ```bash
-# API Documentation
-GET /api/endpoints          # List all available endpoints
-GET /api/ping               # API health check
+# Health & Docs
+GET /api/ping                  # DB connectivity check
+GET /api/endpoints             # List available endpoints
 
-# Address Services
-GET /api/address/{id}                    # Get address by ID
-GET /api/address/search?q={query}       # Search addresses via API
-GET /api/address/search/db?q={query}    # Search addresses in local DB
-GET /api/address/postal/{postnummer}    # Get postal area
+# Adresse
+GET /api/adresse/{id}                             # Adresse på ID
+GET /api/adresse/sok?q={query}&limit={n}          # Søk adresser (DB)
+GET /api/adresse/sok/db?q={query}&limit={n}       # Alias til /adresse/sok
+GET /api/adresse/kommune/{kommunenr}?limit={n}    # Adresser i kommune
+GET /api/adresse/kommune/{kommunenr}/{bygningsnr}?limit={n} # Adresser i kommune for bygningsnummer
 
-# Municipality Services  
-GET /api/municipality/{id}              # Get municipality by ID
-GET /api/municipality/number/{number}   # Get municipality by number
+# Kommune
+GET /api/kommune/{id}            # Kommune på kommunenummer
+GET /api/kommune?limit={n}       # Alle kommuner
 
-# Property Unit Services
-GET /api/property-unit/{id}                    # Get property unit by ID
-GET /api/property-unit/address/{addressId}     # Get units for address
+# Bruksenhet
+GET /api/bruksenhet/{id}                      # Bruksenhet på ID
+GET /api/bruksenhet/adresse/{adresseId}       # Bruksenheter for adresse
+GET /api/bruksenhet/bygning/{bygningId}       # Bruksenheter for bygning
 
-# Cadastral Unit Services
-GET /api/cadastral-unit/{id}                        # Get by ID
-GET /api/cadastral-unit/{knr}/{gnr}/{bnr}           # Get by matrikkel number
-GET /api/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}     # With festenummer
-GET /api/cadastral-unit/{knr}/{gnr}/{bnr}/{fnr}/{snr} # With section
+# Matrikkelenhet
+GET /api/matrikkelenhet/{id}                       # Matrikkelenhet på ID
+GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}          # På matrikkelnummer
+GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}    # Med festenummer
+GET /api/matrikkelenhet/{knr}/{gnr}/{bnr}/{fnr}/{snr} # Med seksjonsnummer
 
-# Code Lists
-GET /api/codelist           # Get all code lists
-GET /api/codelist/{id}      # Get specific code list with codes
+# Gate
+GET /api/gate/{kommunenr}                  # Alle gater i kommune
+GET /api/gate/{kommunenr}/{adressekode}    # Spesifikk gate i kommune
 
-# Portico Export (4-level hierarchy)
-GET /api/portico/export?kommune={kommunenummer}                      # Export all properties in municipality
-GET /api/portico/export?kommune={kommunenummer}&organisasjonsnummer={orgnr}  # Filter by owner
-
-# General Search
-GET /api/search?q={query}&source=api&limit={number}&offset={start}    # Search via Matrikkel API (pagination support)
-GET /api/search?q={query}&source=db     # Search via local database
+# Søk (database)
+GET /api/sok?q={query}&limit={n}
+```
 
 ### Examples
 
@@ -213,31 +207,19 @@ GET /api/search?q={query}&source=db     # Search via local database
 curl http://localhost:8083/api/ping
 
 # Search for address
-curl "http://localhost:8083/api/address/search?q=Bergen"
+curl "http://localhost:8083/api/adresse/sok?q=Bergen"
 
 # Get municipality info
-curl http://localhost:8083/api/municipality/4601
+curl http://localhost:8083/api/kommune/4601
 
-# Search with pagination
-curl "http://localhost:8083/api/search?q=oslo&source=api&limit=50&offset=0"    # First 50 results
-curl "http://localhost:8083/api/search?q=oslo&source=api&limit=50&offset=50"   # Next 50 results  
-curl "http://localhost:8083/api/search?q=oslo&source=api&limit=50&offset=100"  # Results 101-150
+# Search matrikkelenhet by number
+curl "http://localhost:8083/api/matrikkelenhet/4601/12/345"
 
 # Search in local database
-curl "http://localhost:8083/api/search?q=Oslo&source=db"
-
-# Export Portico hierarchy for a municipality (JSON)
-curl "http://localhost:8083/api/portico/export?kommune=4627"
-
-# Export Portico hierarchy filtered by owner (JSON)
-curl "http://localhost:8083/api/portico/export?kommune=4627&organisasjonsnummer=964338442"
-
-# Export Portico hierarchy as Excel spreadsheet
-curl -o portico_export.xlsx "http://localhost:8083/api/portico/export/spreadsheet?kommune=4627"
-
-# Export filtered by owner as Excel spreadsheet
-curl -o portico_owner.xlsx "http://localhost:8083/api/portico/export/spreadsheet?kommune=4627&organisasjonsnummer=964338442"
+curl "http://localhost:8083/api/sok?q=Oslo&limit=50"
 ```
+
+> Code list- og Portico-export endepunkter er fjernet/erstattet av lokale DB-spørringer og CLI/Excel-eksport.
 ```
 
 **Example API Usage**:
