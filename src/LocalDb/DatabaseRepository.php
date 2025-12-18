@@ -77,4 +77,12 @@ abstract class DatabaseRepository
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
     }
+
+    /**
+     * Get the PDO instance for advanced queries
+     */
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
 }

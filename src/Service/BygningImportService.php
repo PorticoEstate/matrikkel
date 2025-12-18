@@ -139,11 +139,13 @@ class BygningImportService
             }
 
             foreach ($objects as $bygning) {
-                $this->saveBygning($bygning);
+                $bygningId = (int) $bygning->id->value;
+                $kommunenummer = $this->resolveKommunenummerForBygning($bygningId, $bygningToMatrikkelMap);
+
+                $this->saveBygning($bygning, $kommunenummer);
                 $bygningerCount++;
 
                 // Save M:N relations in junction table
-                $bygningId = (int) $bygning->id->value;
                 if (isset($bygningToMatrikkelMap[$bygningId])) {
                     foreach ($bygningToMatrikkelMap[$bygningId] as $matrikkelenhetId) {
                         $this->saveBygningMatrikkelenhetRelation($bygningId, $matrikkelenhetId);
@@ -169,7 +171,7 @@ class BygningImportService
         return ['bygninger' => $bygningerCount, 'relations' => $relationsCount];
     }
 
-    private function saveBygning(object $bygning): void
+    private function saveBygning(object $bygning, ?int $kommunenummer = null): void
     {
         $bygningId = (int) $bygning->id->value;
         $bygningsnummer = isset($bygning->bygningsnummer) ? (int) $bygning->bygningsnummer : null;
@@ -330,6 +332,7 @@ class BygningImportService
                 oppvarmings_kode_ids, energikilde_kode_ids,
                 naringsgruppe_kode_id, opprinnelses_kode_id,
                 representasjonspunkt_x, representasjonspunkt_y, representasjonspunkt_z, koordinatsystem,
+                kommunenummer,
                 sist_lastet_ned, oppdatert
             ) VALUES (
                 ?, ?, ?, ?,
@@ -342,6 +345,7 @@ class BygningImportService
                 ?, ?,
                 ?, ?,
                 ?, ?, ?, ?,
+                ?,
                 NOW(), NOW()
             )
             ON CONFLICT (bygning_id) DO UPDATE SET
@@ -371,6 +375,7 @@ class BygningImportService
                 representasjonspunkt_y = EXCLUDED.representasjonspunkt_y,
                 representasjonspunkt_z = EXCLUDED.representasjonspunkt_z,
                 koordinatsystem = EXCLUDED.koordinatsystem,
+                kommunenummer = EXCLUDED.kommunenummer,
                 sist_lastet_ned = NOW(),
                 oppdatert = NOW()
         ";
@@ -392,6 +397,7 @@ class BygningImportService
             $oppvarmings_kode_ids, $energikilde_kode_ids,
             $naringsgruppe_kode_id, $opprinnelses_kode_id,
             $representasjonspunkt_x, $representasjonspunkt_y, $representasjonspunkt_z, $koordinatsystem,
+            $kommunenummer,
         ]);
     }
 
@@ -407,5 +413,23 @@ class BygningImportService
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$bygningId, $matrikkelenhetId]);
+    }
+
+    /**
+     * Resolve kommunenummer for a building via its first mapped matrikkelenhet
+     */
+    private function resolveKommunenummerForBygning(int $bygningId, array $bygningToMatrikkelMap): ?int
+    {
+        if (!isset($bygningToMatrikkelMap[$bygningId]) || empty($bygningToMatrikkelMap[$bygningId])) {
+            return null;
+        }
+
+        $matrikkelenhetId = (int) $bygningToMatrikkelMap[$bygningId][0];
+
+        $stmt = $this->db->prepare('SELECT kommunenummer FROM matrikkel_matrikkelenheter WHERE matrikkelenhet_id = :id');
+        $stmt->execute(['id' => $matrikkelenhetId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return $row && isset($row['kommunenummer']) ? (int) $row['kommunenummer'] : null;
     }
 }

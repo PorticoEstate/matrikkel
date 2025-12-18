@@ -32,22 +32,44 @@ class InngangRepository extends DatabaseRepository
     }
 
     /**
-    * Find existing or create new entrance for a building/address combination
-    */
-    public function findOrCreate(int $bygningId, ?int $vegId, int $husnummer, ?string $bokstav, ?int $adressekode = null): array
-    {
-        $existing = $this->fetchOne(
-            "SELECT * FROM matrikkel_innganger WHERE bygning_id = :bygning_id AND veg_id IS NOT DISTINCT FROM :veg_id AND husnummer = :husnummer AND bokstav IS NOT DISTINCT FROM :bokstav",
-            [
-                'bygning_id' => $bygningId,
-                'veg_id' => $vegId,
-                'husnummer' => $husnummer,
-                'bokstav' => $bokstav,
-            ]
-        );
+     * Find existing or create new entrance for a building/address combination
+     */
+    public function findOrCreate(
+        int $bygningId,
+        ?int $matrikkelBygningNummer,
+        ?int $kommunenummer,
+        ?int $vegId,
+        int $husnummer,
+        ?string $bokstav,
+        ?int $adressekode = null
+    ): array {
+        $existing = null;
+        if ($matrikkelBygningNummer !== null && $kommunenummer !== null) {
+            $existing = $this->fetchOne(
+                "SELECT * FROM matrikkel_innganger WHERE matrikkel_bygning_nummer = :matrikkel_bygning_nummer AND kommunenummer = :kommunenummer AND veg_id IS NOT DISTINCT FROM :veg_id AND husnummer = :husnummer AND bokstav IS NOT DISTINCT FROM :bokstav",
+                [
+                    'matrikkel_bygning_nummer' => $matrikkelBygningNummer,
+                    'kommunenummer' => $kommunenummer,
+                    'veg_id' => $vegId,
+                    'husnummer' => $husnummer,
+                    'bokstav' => $bokstav,
+                ]
+            );
+        }
+
+        if (!$existing) {
+            $existing = $this->fetchOne(
+                "SELECT * FROM matrikkel_innganger WHERE bygning_id = :bygning_id AND veg_id IS NOT DISTINCT FROM :veg_id AND husnummer = :husnummer AND bokstav IS NOT DISTINCT FROM :bokstav",
+                [
+                    'bygning_id' => $bygningId,
+                    'veg_id' => $vegId,
+                    'husnummer' => $husnummer,
+                    'bokstav' => $bokstav,
+                ]
+            );
+        }
 
         if ($existing) {
-            // Backfill adressekode when it arrives later (legacy rows may have NULL)
             if ($adressekode !== null && $existing['adressekode'] !== $adressekode) {
                 $this->execute(
                     "UPDATE matrikkel_innganger SET adressekode = :adressekode WHERE inngang_id = :inngang_id",
@@ -58,14 +80,30 @@ class InngangRepository extends DatabaseRepository
                 );
                 $existing['adressekode'] = $adressekode;
             }
+
+            if ((($existing['matrikkel_bygning_nummer'] ?? null) === null || ($existing['kommunenummer'] ?? null) === null) && $matrikkelBygningNummer !== null && $kommunenummer !== null) {
+                $this->execute(
+                    "UPDATE matrikkel_innganger SET matrikkel_bygning_nummer = :matrikkel_bygning_nummer, kommunenummer = :kommunenummer WHERE inngang_id = :inngang_id",
+                    [
+                        'matrikkel_bygning_nummer' => $matrikkelBygningNummer,
+                        'kommunenummer' => $kommunenummer,
+                        'inngang_id' => $existing['inngang_id'],
+                    ]
+                );
+                $existing['matrikkel_bygning_nummer'] = $matrikkelBygningNummer;
+                $existing['kommunenummer'] = $kommunenummer;
+            }
+
             return $existing;
         }
 
         $this->execute(
-            "INSERT INTO matrikkel_innganger (bygning_id, veg_id, husnummer, bokstav, adressekode, lopenummer_i_bygg, lokasjonskode_inngang)
-             VALUES (:bygning_id, :veg_id, :husnummer, :bokstav, :adressekode, 0, '')",
+            "INSERT INTO matrikkel_innganger (bygning_id, matrikkel_bygning_nummer, kommunenummer, veg_id, husnummer, bokstav, adressekode, lopenummer_i_bygg, lokasjonskode_inngang)
+             VALUES (:bygning_id, :matrikkel_bygning_nummer, :kommunenummer, :veg_id, :husnummer, :bokstav, :adressekode, 0, '')",
             [
                 'bygning_id' => $bygningId,
+                'matrikkel_bygning_nummer' => $matrikkelBygningNummer,
+                'kommunenummer' => $kommunenummer,
                 'veg_id' => $vegId,
                 'husnummer' => $husnummer,
                 'bokstav' => $bokstav,
@@ -74,9 +112,10 @@ class InngangRepository extends DatabaseRepository
         );
 
         return $this->fetchOne(
-            "SELECT * FROM matrikkel_innganger WHERE bygning_id = :bygning_id AND veg_id IS NOT DISTINCT FROM :veg_id AND husnummer = :husnummer AND bokstav IS NOT DISTINCT FROM :bokstav",
+            "SELECT * FROM matrikkel_innganger WHERE matrikkel_bygning_nummer IS NOT DISTINCT FROM :matrikkel_bygning_nummer AND kommunenummer IS NOT DISTINCT FROM :kommunenummer AND veg_id IS NOT DISTINCT FROM :veg_id AND husnummer = :husnummer AND bokstav IS NOT DISTINCT FROM :bokstav",
             [
-                'bygning_id' => $bygningId,
+                'matrikkel_bygning_nummer' => $matrikkelBygningNummer,
+                'kommunenummer' => $kommunenummer,
                 'veg_id' => $vegId,
                 'husnummer' => $husnummer,
                 'bokstav' => $bokstav,

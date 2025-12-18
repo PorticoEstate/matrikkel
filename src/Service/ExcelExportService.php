@@ -120,28 +120,99 @@ class ExcelExportService
 
 		$this->formatHeader($sheet, 1, count($headers));
 
-		// Data rows
-		$row = 2;
-		foreach ($exportData['eiendommer'] as $eiendom)
-		{
-			foreach ($eiendom['bygg'] as $bygg)
-			{
-				$locs = $this->splitLokasjonskode($bygg['lokasjonskode'] ?? null);
+		// Aggregate buildings by matrikkel_bygning_nummer to avoid duplicates across eiendommer
+		$aggregated = [];
 
-				$sheet->setCellValue([1, $row], $locs['loc1']);
-				$sheet->setCellValue([2, $row], $locs['loc2']);
-				$sheet->setCellValue([3, $row], $bygg['lokasjonskode'] ?? '');
-				$sheet->setCellValue([4, $row], $bygg['matrikkel_bygning_nummer'] ?? '');
-				$sheet->setCellValue([5, $row], $bygg['lopenummer_i_eiendom'] ?? '');
-				$sheet->setCellValue([6, $row], $bygg['bygningstype_kode_id'] ?? '');
-				$sheet->setCellValue([7, $row], $bygg['antall_etasjer'] ?? '');
-				$sheet->setCellValue([8, $row], $bygg['bruksareal'] ?? '');
-				$sheet->setCellValue([9, $row], $bygg['byggeaar'] ?? '');
-				$sheet->setCellValue([10, $row], $bygg['representasjonspunkt_x'] ?? '');
-				$sheet->setCellValue([11, $row], $bygg['representasjonspunkt_y'] ?? '');
+		foreach ($exportData['eiendommer'] as $eiendom) {
+			foreach ($eiendom['bygg'] as $bygg) {
+				$mbn = $bygg['matrikkel_bygning_nummer'] ?? null;
 
-				$row++;
+				// If building number is missing, treat as unique by bygning_id to avoid merging unrelated rows
+				$key = $mbn ?: ('id_' . ($bygg['bygning_id'] ?? uniqid('bygg_', true)));
+
+				if (!isset($aggregated[$key])) {
+					// Initialize aggregation bucket
+					$aggregated[$key] = [
+						'lokasjonskode' => $bygg['lokasjonskode'] ?? null,
+						'locs' => $this->splitLokasjonskode($bygg['lokasjonskode'] ?? null),
+						'matrikkel_bygning_nummer' => $mbn,
+						'lopenummer_i_eiendom' => $bygg['lopenummer_i_eiendom'] ?? null,
+						'bygningstype_kode_id' => $bygg['bygningstype_kode_id'] ?? null,
+						'antall_etasjer' => $bygg['antall_etasjer'] ?? null,
+						'bruksareal_sum' => (float) ($bygg['bruksareal'] ?? 0),
+						'byggeaar_min' => $bygg['byggeaar'] ?? null,
+						'representasjonspunkt_x' => $bygg['representasjonspunkt_x'] ?? null,
+						'representasjonspunkt_y' => $bygg['representasjonspunkt_y'] ?? null,
+					];
+				} else {
+					$bucket = &$aggregated[$key];
+
+					// Choose the smallest lokasjonskode (stable, e.g., 5000-01 < 5000-02) and carry its locs + lopenummer
+					$currentLok = $bucket['lokasjonskode'];
+					$newLok = $bygg['lokasjonskode'] ?? null;
+					if ($newLok !== null && ($currentLok === null || strcmp((string)$newLok, (string)$currentLok) < 0)) {
+						$bucket['lokasjonskode'] = $newLok;
+						$bucket['locs'] = $this->splitLokasjonskode($newLok);
+						$bucket['lopenummer_i_eiendom'] = $bygg['lopenummer_i_eiendom'] ?? $bucket['lopenummer_i_eiendom'];
+					}
+
+					// First non-null bygningstype_kode_id
+					if ($bucket['bygningstype_kode_id'] === null && ($bygg['bygningstype_kode_id'] ?? null) !== null) {
+						$bucket['bygningstype_kode_id'] = $bygg['bygningstype_kode_id'];
+					}
+
+					// antall_etasjer: take max
+					$etasjer = $bygg['antall_etasjer'] ?? null;
+					if ($etasjer !== null) {
+						if ($bucket['antall_etasjer'] === null) {
+							$bucket['antall_etasjer'] = $etasjer;
+						} else {
+							$bucket['antall_etasjer'] = max((int)$bucket['antall_etasjer'], (int)$etasjer);
+						}
+					}
+
+					// bruksareal: sum
+					$bucket['bruksareal_sum'] += (float) ($bygg['bruksareal'] ?? 0);
+
+					// byggeaar: min
+					$byggAar = $bygg['byggeaar'] ?? null;
+					if ($byggAar !== null) {
+						if ($bucket['byggeaar_min'] === null) {
+							$bucket['byggeaar_min'] = $byggAar;
+						} else {
+							$bucket['byggeaar_min'] = min((int)$bucket['byggeaar_min'], (int)$byggAar);
+						}
+					}
+
+					// representasjonspunkt: keep first non-null
+					if ($bucket['representasjonspunkt_x'] === null && ($bygg['representasjonspunkt_x'] ?? null) !== null) {
+						$bucket['representasjonspunkt_x'] = $bygg['representasjonspunkt_x'];
+					}
+					if ($bucket['representasjonspunkt_y'] === null && ($bygg['representasjonspunkt_y'] ?? null) !== null) {
+						$bucket['representasjonspunkt_y'] = $bygg['representasjonspunkt_y'];
+					}
+				}
 			}
+		}
+
+		// Data rows from aggregated buckets
+		$row = 2;
+		foreach ($aggregated as $bucket) {
+			$locs = $bucket['locs'] ?? ['loc1' => null, 'loc2' => null];
+
+			$sheet->setCellValue([1, $row], $locs['loc1']);
+			$sheet->setCellValue([2, $row], $locs['loc2']);
+			$sheet->setCellValue([3, $row], $bucket['lokasjonskode'] ?? '');
+			$sheet->setCellValue([4, $row], $bucket['matrikkel_bygning_nummer'] ?? '');
+			$sheet->setCellValue([5, $row], $bucket['lopenummer_i_eiendom'] ?? '');
+			$sheet->setCellValue([6, $row], $bucket['bygningstype_kode_id'] ?? '');
+			$sheet->setCellValue([7, $row], $bucket['antall_etasjer'] ?? '');
+			$sheet->setCellValue([8, $row], $bucket['bruksareal_sum'] ?? '');
+			$sheet->setCellValue([9, $row], $bucket['byggeaar_min'] ?? '');
+			$sheet->setCellValue([10, $row], $bucket['representasjonspunkt_x'] ?? '');
+			$sheet->setCellValue([11, $row], $bucket['representasjonspunkt_y'] ?? '');
+
+			$row++;
 		}
 
 		$this->autoWidth($sheet, 1, count($headers));
