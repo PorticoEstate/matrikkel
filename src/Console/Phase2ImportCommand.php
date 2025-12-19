@@ -214,7 +214,7 @@ HELP
             ));
 
             // Step 4: Import bruksenheter (API-filtered)
-            $io->section('Step 4/6: Importing bruksenheter (API-filtered)');
+            $io->section('Step 4/7: Importing bruksenheter (API-filtered)');
             $bruksenhetCount = $this->bruksenhetImportService->importBruksenheterForMatrikkelenheter(
                 $io,
                 $kommunenummer,
@@ -222,8 +222,36 @@ HELP
                 $batchSize
             );
             
+            // Step 4b: Complete missing bruksenheter for bygninger
+            $io->section('Step 4b/7: Completing missing bruksenheter per bygg');
+            $io->text('Checking bygninger for missing bruksenheter that were not caught via matrikkelenhet filter');
+            
+            // Get all bygning_id from imported bygninger
+            $stmt = $this->bygningImportService->getDb()->prepare(
+                "SELECT bygning_id FROM matrikkel_bygninger ORDER BY bygning_id"
+            );
+            $stmt->execute();
+            $allBygningIds = array_column($stmt->fetchAll(\PDO::FETCH_ASSOC), 'bygning_id');
+            
+            $completedBruksenhetCount = 0;
+            if (!empty($allBygningIds)) {
+                $completedBruksenhetCount = $this->bruksenhetImportService->completeMissingBruksenheterForBygninger(
+                    $io,
+                    $allBygningIds
+                );
+                
+                if ($completedBruksenhetCount > 0) {
+                    $io->success(sprintf(
+                        'Completed %d missing bruksenheter for bygninger',
+                        $completedBruksenhetCount
+                    ));
+                } else {
+                    $io->text('No missing bruksenheter found');
+                }
+            }
+            
             // Step 5: Import adresser (API-filtered)
-            $io->section('Step 5/6: Importing adresser (API-filtered)');
+            $io->section('Step 5/7: Importing adresser (API-filtered)');
             $io->text('Adresser depend on veger being in database (FK constraint for vegadresser)');
             
             // $filteredMatrikkelenheter is already array of matrikkelenhet_id integers
@@ -239,7 +267,7 @@ HELP
             ));
             
             // Step 6: Import missing adresser referenced by bruksenheter (Orphan Resolution)
-            $io->section('Step 6/6: Resolving orphaned adresse references');
+            $io->section('Step 6/7: Resolving orphaned adresse references');
             $io->text('Importing addresses that bruksenheter reference but were filtered out');
             
             $missingAdresseResult = $this->adresseImportService->importMissingAdresserFromBruksenheter(
@@ -265,6 +293,7 @@ HELP
                 "Filtered matrikkelenheter: " . count($filteredMatrikkelenheter),
                 "Imported veger: $vegCount",
                 "Imported bruksenheter: $bruksenhetCount",
+                "Completed missing bruksenheter: $completedBruksenhetCount",
                 "Imported bygninger: {$result['bygninger']} (+ {$result['relations']} relations)",
                 "Imported adresser: {$adresseResult['adresser']} (+ {$adresseResult['relations']} relations)",
                 "Resolved orphaned addresses: {$missingAdresseResult['adresser']} (+ {$missingAdresseResult['relations']} relations)",

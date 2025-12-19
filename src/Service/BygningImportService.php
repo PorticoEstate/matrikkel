@@ -27,6 +27,15 @@ class BygningImportService
     ) {}
 
     /**
+     * Get PDO instance for direct database access
+     * @return \PDO
+     */
+    public function getDb(): \PDO
+    {
+        return $this->db;
+    }
+
+    /**
      * Import bygninger for given matrikkelenhet IDs using two-step pattern
      *
      * @param array<int> $matrikkelenhetIds Array of matrikkelenhet IDs to find bygninger for
