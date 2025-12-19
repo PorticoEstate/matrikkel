@@ -110,7 +110,8 @@ class ExcelExportService
 			'bruksareal',
 			'byggeaar',
 			'representasjonspunkt_x',
-			'representasjonspunkt_y'
+			'representasjonspunkt_y',
+			'google_maps_url'
 		];
 
 		foreach ($headers as $col => $header)
@@ -211,6 +212,19 @@ class ExcelExportService
 			$sheet->setCellValue([9, $row], $bucket['byggeaar_min'] ?? '');
 			$sheet->setCellValue([10, $row], $bucket['representasjonspunkt_x'] ?? '');
 			$sheet->setCellValue([11, $row], $bucket['representasjonspunkt_y'] ?? '');
+
+			// Build a Google Maps link when both coordinates are present (convert UTM32 → WGS84 DMS)
+			if (($bucket['representasjonspunkt_x'] ?? null) !== null && ($bucket['representasjonspunkt_y'] ?? null) !== null) {
+				$utmX = (float) $bucket['representasjonspunkt_x'];
+				$utmY = (float) $bucket['representasjonspunkt_y'];
+				[$latDec, $lonDec] = $this->utm32ToLatLon($utmX, $utmY);
+				$latDms = $this->decimalToDmsString($latDec, true);
+				$lonDms = $this->decimalToDmsString($lonDec, false);
+				$mapsUrl = sprintf('https://www.google.com/maps/place/%s+%s/@%F,%F,17z/', $latDms, $lonDms, $latDec, $lonDec);
+				$sheet->setCellValue([12, $row], $mapsUrl);
+			} else {
+				$sheet->setCellValue([12, $row], '');
+			}
 
 			$row++;
 		}
@@ -443,5 +457,69 @@ class ExcelExportService
 		{
 			$sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
 		}
+	}
+
+	/**
+	 * Convert UTM zone 32 (EPSG:25832) to WGS84 lat/lon (decimal degrees)
+	 * Simplified algorithm suitable for Google Maps links.
+	 */
+	private function utm32ToLatLon(float $x, float $y): array
+	{
+		// Constants for ETRS89 / UTM zone 32N
+		$k0 = 0.9996;
+		$a = 6378137.0;
+		$e = 0.08181919084262149; // WGS84 eccentricity
+		$e1sq = 0.006739496742276434; // e^2 / (1 - e^2)
+		$falseEasting = 500000.0;
+		$lonOrigin = 9.0; // degrees
+
+		$x = $x - $falseEasting;
+		$y = $y;
+
+		$m = $y / $k0;
+		$mu = $m / ($a * (1 - pow($e, 2) / 4 - 3 * pow($e, 4) / 64 - 5 * pow($e, 6) / 256));
+
+		$e1 = (1 - sqrt(1 - pow($e, 2))) / (1 + sqrt(1 - pow($e, 2)));
+		$j1 = 3 * $e1 / 2 - 27 * pow($e1, 3) / 32;
+		$j2 = 21 * pow($e1, 2) / 16 - 55 * pow($e1, 4) / 32;
+		$j3 = 151 * pow($e1, 3) / 96;
+		$j4 = 1097 * pow($e1, 4) / 512;
+
+		$fp = $mu + $j1 * sin(2 * $mu) + $j2 * sin(4 * $mu) + $j3 * sin(6 * $mu) + $j4 * sin(8 * $mu);
+
+		$sinFp = sin($fp);
+		$cosFp = cos($fp);
+		$tanFp = tan($fp);
+
+		$c1 = $e1sq * pow($cosFp, 2);
+		$t1 = pow($tanFp, 2);
+		$r1 = ($a * (1 - pow($e, 2))) / pow(1 - pow($e * $sinFp, 2), 1.5);
+		$n1 = $a / sqrt(1 - pow($e * $sinFp, 2));
+
+		$d = $x / ($n1 * $k0);
+
+		// Latitude
+		$lat = $fp - ($n1 * $tanFp / $r1) * (
+			pow($d, 2) / 2 -
+			(5 + 3 * $t1 + 10 * $c1 - 4 * pow($c1, 2) - 9 * $e1sq) * pow($d, 4) / 24 +
+			(61 + 90 * $t1 + 298 * $c1 + 45 * pow($t1, 2) - 252 * $e1sq - 3 * pow($c1, 2)) * pow($d, 6) / 720
+		);
+
+		// Longitude
+		$lon = ($d - (1 + 2 * $t1 + $c1) * pow($d, 3) / 6 + (5 - 2 * $c1 + 28 * $t1 - 3 * pow($c1, 2) + 8 * $e1sq + 24 * pow($t1, 2)) * pow($d, 5) / 120) / $cosFp;
+		$lon = deg2rad($lonOrigin) + $lon;
+
+		return [rad2deg($lat), rad2deg($lon)];
+	}
+
+	private function decimalToDmsString(float $deg, bool $isLat): string
+	{
+		$direction = $deg < 0 ? ($isLat ? 'S' : 'W') : ($isLat ? 'N' : 'E');
+		$deg = abs($deg);
+		$d = floor($deg);
+		$minFloat = ($deg - $d) * 60;
+		$m = floor($minFloat);
+		$s = ($minFloat - $m) * 60;
+		return sprintf('%d°%02d\'%0.1f"%s', $d, $m, $s, $direction);
 	}
 }
