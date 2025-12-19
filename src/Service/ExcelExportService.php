@@ -253,7 +253,8 @@ class ExcelExportService
 			'veg_id',
 			'adressekode',
 			'lopenummer_i_bygg',
-			'matrikkelnummer_tekst'
+			'matrikkelnummer_tekst',
+			'google_maps_url'
 		];
 
 		foreach ($headers as $col => $header)
@@ -285,6 +286,19 @@ class ExcelExportService
 					$sheet->setCellValue([10, $row], $inngang['adressekode'] ?? '');
 					$sheet->setCellValue([11, $row], $inngang['lopenummer_i_bygg'] ?? '');
 					$sheet->setCellValue([12, $row], $eiendom['matrikkelnummer_tekst'] ?? '');
+
+					// Build Google Maps link using building coordinates (convert UTM32 → WGS84 DMS)
+					if (($bygg['representasjonspunkt_x'] ?? null) !== null && ($bygg['representasjonspunkt_y'] ?? null) !== null) {
+						$utmX = (float) $bygg['representasjonspunkt_x'];
+						$utmY = (float) $bygg['representasjonspunkt_y'];
+						[$latDec, $lonDec] = $this->utm32ToLatLon($utmX, $utmY);
+						$latDms = $this->decimalToDmsString($latDec, true);
+						$lonDms = $this->decimalToDmsString($lonDec, false);
+						$mapsUrl = sprintf('https://www.google.com/maps/place/%s+%s/@%F,%F,17z/', $latDms, $lonDms, $latDec, $lonDec);
+						$sheet->setCellValue([13, $row], $mapsUrl);
+					} else {
+						$sheet->setCellValue([13, $row], '');
+					}
 
 					$row++;
 				}
