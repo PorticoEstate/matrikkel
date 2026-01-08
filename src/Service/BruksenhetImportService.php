@@ -468,11 +468,15 @@ class BruksenhetImportService
                             return false;
                         }
                         
-                        // Build matrikkelnummer tekst
-                        $matrikkelnummerTekst = $matrikkelenhetObj->matrikkelnummerTekst ?? 
-                            "$kommunenr/$gnr/$bnr";
-                        if ($fnr > 0) $matrikkelnummerTekst .= "-$fnr";
-                        if ($snr > 0) $matrikkelnummerTekst .= "-$snr";
+                        // Build matrikkelnummer tekst (format: "kommunenr/gnr/bnr/fnr/snr")
+                        $matrikkelnummerTekst = sprintf(
+                            "%d/%d/%d/%d/%d",
+                            $kommunenr,
+                            $gnr,
+                            $bnr,
+                            $fnr,
+                            $snr
+                        );
                         
                         // Import it to database
                         $stmt = $this->db->prepare("
