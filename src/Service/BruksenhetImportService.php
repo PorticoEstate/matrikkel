@@ -371,12 +371,46 @@ class BruksenhetImportService
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     if ($result) {
                         $matrikkelenhetId = (int) $result['matrikkelenhet_id'];
+                    } else {
+                        // Bygning not in M:N table yet - try to fetch bygning from API to get matrikkelenhet
+                        error_log("Bruksenhet $bruksenhetId: Bygning $bygningId not found in M:N table. Fetching from API...");
+                        
+                        try {
+                            $bygningIdObj = new \Iaasen\Matrikkel\Client\BygningId();
+                            $bygningIdObj->value = $bygningId;
+                            
+                            $fetchedBygninger = $this->storeClient->getObjects([$bygningIdObj]);
+                            
+                            if (!empty($fetchedBygninger)) {
+                                $bygningObj = reset($fetchedBygninger);
+                                
+                                // Extract matrikkelenhet IDs from bygning
+                                if (isset($bygningObj->matrikkelenhetIds) && isset($bygningObj->matrikkelenhetIds->item)) {
+                                    $matrikkelenhetIdItems = is_array($bygningObj->matrikkelenhetIds->item)
+                                        ? $bygningObj->matrikkelenhetIds->item
+                                        : [$bygningObj->matrikkelenhetIds->item];
+                                    
+                                    if (!empty($matrikkelenhetIdItems)) {
+                                        // Use the first matrikkelenhet for this bygning
+                                        $firstMatrikkelenhetIdObj = reset($matrikkelenhetIdItems);
+                                        $matrikkelenhetId = $firstMatrikkelenhetIdObj->value ?? null;
+                                        
+                                        if ($matrikkelenhetId) {
+                                            error_log("✓ Found matrikkelenhet $matrikkelenhetId from bygning $bygningId API response");
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            error_log("⚠ Failed to fetch bygning $bygningId from API: " . $e->getMessage());
+                        }
                     }
                 }
             }
             
             // Skip if still no matrikkelenhetId
             if ($matrikkelenhetId === null) {
+                error_log("Skipping bruksenhet $bruksenhetId: No matrikkelenhetId found (direct, via bygning M:N, or via bygning API)");
                 return false;
             }
             
@@ -405,6 +439,34 @@ class BruksenhetImportService
                         $bnr = $matrikkelenhetObj->matrikkelenhetId->bruksnummer ?? null;
                         $fnr = $matrikkelenhetObj->matrikkelenhetId->festenummer ?? 0;
                         $snr = $matrikkelenhetObj->matrikkelenhetId->seksjonsnummer ?? 0;
+
+                        // Fallback: some responses only populate matrikkelnummer. Use that when primary fields are null.
+                        if (isset($matrikkelenhetObj->matrikkelnummer)) {
+                            $mn = $matrikkelenhetObj->matrikkelnummer;
+                            $kommunenr = $kommunenr ?? ($mn->kommuneId->value ?? null);
+                            $gnr = $gnr ?? ($mn->gardsnummer ?? null);
+                            $bnr = $bnr ?? ($mn->bruksnummer ?? null);
+                            $fnr = $fnr ?: ($mn->festenummer ?? 0);
+                            $snr = $snr ?: ($mn->seksjonsnummer ?? 0);
+                        }
+
+                        error_log('⚠ Matrikkelenhet data: ' . json_encode($matrikkelenhetObj, JSON_PARTIAL_OUTPUT_ON_ERROR));
+                        
+                        // Validate required fields - skip if missing
+                        if ($kommunenr === null || $gnr === null || $bnr === null) {
+                            // Log a compact snapshot so we can inspect why fields are missing
+                            $snapshot = [
+                                'matrikkelenhet_id' => $matrikkelenhetId,
+                                'kommunenummer' => $kommunenr,
+                                'gardsnummer' => $gnr,
+                                'bruksnummer' => $bnr,
+                                'festenummer' => $fnr,
+                                'seksjonsnummer' => $snr,
+                                'raw' => json_encode($matrikkelenhetObj, JSON_PARTIAL_OUTPUT_ON_ERROR)
+                            ];
+                            error_log('⚠ Matrikkelenhet missing required fields: ' . json_encode($snapshot));
+                            return false;
+                        }
                         
                         // Build matrikkelnummer tekst
                         $matrikkelnummerTekst = $matrikkelenhetObj->matrikkelnummerTekst ?? 
