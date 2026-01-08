@@ -171,12 +171,12 @@ class PorticoExportService
         }
 
         // Build bygg hierarchy from collected buildings
+        // Use lopenummer_i_eiendom from database (already correctly sequenced)
+        // instead of re-sequencing them
         $bygg = [];
-        $byggSekvens = 1;
         foreach ($bygninger as $bygning) {
-            $byggKode = sprintf('%d-%02d', $lokasjonskode, $byggSekvens);
-            $bygg[] = $this->buildByggHierarchy($bygning, $lokasjonskode, $byggSekvens);
-            $byggSekvens++;
+            $sekvens = (int)($bygning['lopenummer_i_eiendom'] ?? 1);
+            $bygg[] = $this->buildByggHierarchy($bygning, $lokasjonskode, $sekvens);
         }
 
         return [
