@@ -249,4 +249,18 @@ class MatrikkelenhetTable extends AbstractTable
         // Return as string
         return (string)$value;
     }
+    
+    /**
+     * Check if a matrikkelenhet exists in the database by ID
+     * 
+     * @param int $matrikkelenhetId
+     * @return bool
+     */
+    public function propertyExists(int $matrikkelenhetId): bool
+    {
+        $sql = "SELECT COUNT(*) as cnt FROM {$this->tableName} WHERE matrikkelenhet_id = ?";
+        $result = $this->dbAdapter->query($sql, [$matrikkelenhetId]);
+        $row = $result->current();
+        return ($row['cnt'] ?? 0) > 0;
+    }
 }

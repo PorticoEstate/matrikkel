@@ -140,6 +140,77 @@ php bin/console matrikkel:debug-matrikkelenhet
 php bin/console matrikkel:test-nedlastning
 ```
 
+**Lookup and supplement data by street address:**
+
+Lookup matrikkelenheter, bruksenheter, and registered owners by street address components (gatenavn + husnummer + bokstav). Supports both single address lookups and batch CSV imports.
+
+```bash
+# Single address lookup with interactive disambiguation for duplicate street names
+php bin/console matrikkel:supplement-by-address \
+  --kommune=4640 \
+  --gatenavn="Skulevegen" \
+  --husnummer=5 \
+  --bokstav=A
+
+# Lookup without house letter
+php bin/console matrikkel:supplement-by-address \
+  --kommune=4627 \
+  --gatenavn="Storgata" \
+  --husnummer=42
+
+# Batch import from CSV file
+php bin/console matrikkel:supplement-by-address --file=addresses.csv
+
+# Skip fetching related objects (faster, only returns vegadresse)
+php bin/console matrikkel:supplement-by-address \
+  --kommune=4640 \
+  --gatenavn="Skulevegen" \
+  --husnummer=5 \
+  --no-related
+```
+
+**CSV Format for batch imports** (`addresses.csv`):
+```csv
+kommunenr,gatenavn,husnummer,bokstav
+4640,Skulevegen,5,A
+4627,Storgata,42,
+4601,Åsane Alle,15,B
+```
+
+**Command features:**
+- Interactive street name disambiguation: if multiple streets share the same name in a kommune, you'll be prompted to select which one
+- Fetches linked data from SOAP API:
+  - **Vegadresse**: The specific address record with coordinates and metadata
+  - **Matrikkelenhet**: The cadastral unit (property) linked to the address with matrikkelnummer and areal
+  - **Registered owners**: Tinglyste eiere (owners) extracted from SOAP eierforhold with type, identifier, and ownership details
+  - **Bruksenheter**: Dwelling units (apartments, rooms) linked to the building
+- Batch mode (CSV): Automatically uses first match without prompts for efficiency
+
+**Output example:**
+```
+✓ Funnet: Skulevegen 5 (Veg ID: 229923782, Adressekode: 4300)
+
+Vegadresse details:
+  Vegadresse ID    229949604
+
+Linked Matrikkelenhet:
+  Matrikkelenhet ID    229909642
+  Matrikkelnummer      4640/21/4
+  Areal                0 m²
+
+Registered Owners (Tinglyst Eier): 1 owner(s)
+  Owner #6364620555:
+    Name               SOGNDAL KOMMUNE
+    Type               Juridisk person
+    Identifikator      922121893
+    From               1895-02-09
+
+Linked Bruksenheter: 3 unit(s)
+  - ID: 230012921, Type: 4, Etasje: 0
+  - ID: 230012923, Type: 4, Etasje: 0
+  - ID: 230012922, Type: 4, Etasje: 0
+```
+
 **Portico hierarchy organization:**
 
 ```bash
