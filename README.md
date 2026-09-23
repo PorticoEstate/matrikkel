@@ -140,6 +140,34 @@ php bin/console matrikkel:debug-matrikkelenhet
 php bin/console matrikkel:test-nedlastning
 ```
 
+**Targeted download of buildings and addresses:**
+
+Use `matrikkel:download-buildings` when you need complete data for specific buildings. The command looks up each `bygningsnummer` directly, fetches the complete `Bygning` objects through `StoreService`, finds their addresses through `AdresseService`, and adds the complete address objects under the `adresser` property.
+
+Only the requested buildings and their addresses are downloaded. The command does not perform a municipality-wide building download.
+
+```bash
+# Download two specific buildings from municipality 4601, including addresses
+php bin/console matrikkel:download-buildings \
+  --kommune=4601 \
+  --bygningsnummer=13913528 \
+  --bygningsnummer=20773502 \
+  --output=var/buildings-4601-with-addresses.json
+```
+
+The output is a JSON array containing the complete building objects. Each building includes its building ID, building number, municipality, coordinates, floors, area data, dwelling-unit IDs, status history, and an `adresser` array with complete address objects.
+
+Multiple numbers can also be supplied as a comma-separated value:
+
+```bash
+php bin/console matrikkel:download-buildings \
+  --kommune=4601 \
+  --bygningsnummer=13913528,20773502 \
+  --output=var/buildings-4601-with-addresses.json
+```
+
+The command validates that each returned building belongs to the requested municipality. Buildings from another municipality are excluded from the output.
+
 **Lookup and supplement data by street address:**
 
 Lookup matrikkelenheter, bruksenheter, and registered owners by street address components (gatenavn + husnummer + bokstav). Supports both single address lookups and batch CSV imports.
